@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -6,7 +6,6 @@ export class WorkspaceService {
   constructor(private prisma: PrismaService) {}
 
   async getWorkspaces(userId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return await this.prisma.workspace.findMany({
       where: {
         members: {
@@ -22,7 +21,6 @@ export class WorkspaceService {
   }
 
   async createWorkspace(name: string, userId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return await this.prisma.workspace.create({
       data: {
         name,
@@ -44,12 +42,27 @@ export class WorkspaceService {
     userId: string,
     role: 'editor' | 'viewer',
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return await this.prisma.workspaceMember.create({
-      data: {
-        workspaceId,
-        userId,
-        role,
+    try {
+      return await this.prisma.workspaceMember.create({
+        data: {
+          workspaceId,
+          userId,
+          role,
+        },
+      });
+    } catch (error) {
+      if ((error as any).code === 'P2002') {
+        throw new ConflictException('User already in workspace');
+      }
+      throw error;
+    }
+  }
+
+  async getWorkspaceMembers(workspaceId: string) {
+    return await this.prisma.workspaceMember.findMany({
+      where: { workspaceId },
+      include: {
+        user: true,
       },
     });
   }
