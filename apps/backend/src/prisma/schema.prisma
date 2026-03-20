@@ -7,7 +7,36 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id        String              @id @default(uuid())
+  email     String              @unique
+  createdAt DateTime            @default(now())
+
+  memberships WorkspaceMember[]
 }
+
+model Workspace {
+  id        String              @id @default(uuid())
+  name      String
+  createdAt DateTime            @default(now())
+
+  members   WorkspaceMember[]
+}
+
+model WorkspaceMember {
+  id          String     @id @default(uuid())
+  userId      String
+  workspaceId String
+  role        Role
+  createdAt   DateTime   @default(now())
+
+  user        User       @relation(fields: [userId], references: [id])
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId]) // prevent duplicates
+}
+
+enum Role {
+  owner
+  editor
+  viewer
+} 
