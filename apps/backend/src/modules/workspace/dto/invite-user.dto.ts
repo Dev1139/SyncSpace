@@ -1,4 +1,4 @@
-import { IsUUID, IsEnum } from 'class-validator';
+import { IsEmail, IsEnum } from 'class-validator';
 
 export enum Role {
   editor = 'editor',
@@ -6,8 +6,8 @@ export enum Role {
 }
 
 export class InviteUserDto {
-  @IsUUID()
-  userId: string;
+  @IsEmail()
+  email: string;
 
   @IsEnum(Role)
   role: Role;

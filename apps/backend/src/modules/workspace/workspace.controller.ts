@@ -6,6 +6,7 @@ import {
   Headers,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -14,24 +15,37 @@ import { WorkspaceMemberGuard } from 'src/common/guards/workspace-member.guard';
 import { WorkspaceRoleGuard } from 'src/common/guards/workspace-role.guard';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { WorkspaceParamDto } from './dto/workspace-param.dto';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { PaginationDto } from './dto/pagination.dto';
 
 @Controller('workspace')
+@UseGuards(JwtAuthGuard) // 👈 protect all routes
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
 
   @Get()
-  findAll(@Body('userId') userId: string) {
-    return this.workspaceService.getWorkspaces(userId);
+  findAll(@Req() req: any, @Query() query: PaginationDto) {
+    const userId = req.user.userId;
+
+    return this.workspaceService.getWorkspaces(
+      userId,
+      query.page,
+      query.limit,
+      query.search,
+      query.sort,
+      query.order,
+    );
   }
 
   @Get(':workspaceId/members')
   @UseGuards(WorkspaceMemberGuard)
-  getMembers(@Param('workspaceId') params: WorkspaceParamDto) {
+  getMembers(@Param() params: WorkspaceParamDto) {
     return this.workspaceService.getWorkspaceMembers(params.workspaceId);
   }
 
   @Post()
-  create(@Body('name') name: string, @Headers('x-user-id') userId: string) {
+  create(@Body('name') name: string, @Req() req: any) {
+    const userId = req.user.userId;
     return this.workspaceService.createWorkspace(name, userId);
   }
 
@@ -48,10 +62,6 @@ export class WorkspaceController {
       throw new ForbiddenException('You do not have permission to invite');
     }
 
-    return this.workspaceService.inviteUser(
-      workspaceId,
-      body.userId,
-      body.role,
-    );
+    return this.workspaceService.inviteUser(workspaceId, body.email, body.role);
   }
 }

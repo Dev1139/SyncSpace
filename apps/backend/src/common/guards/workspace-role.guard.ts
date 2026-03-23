@@ -13,11 +13,8 @@ export class WorkspaceRoleGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
-    const userId = request.headers['x-user-id'];
+    const userId = request.user.userId;
     const workspaceId = request.params.workspaceId;
-    console.log('GUARD HIT');
-    console.log('userId:', userId);
-    console.log('workspaceId:', workspaceId);
 
     if (!userId || !workspaceId) {
       throw new ForbiddenException('Missing user or workspace');
