@@ -7,6 +7,7 @@ import { Plugin } from "prosemirror-state";
 import * as awarenessProtocol from "y-protocols/awareness";
 import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
+import Toolbar from "./Toolbar";
 
 const documentId = "e0e1e19a-50c2-4410-8c07-46f1450c4cce";
 
@@ -53,7 +54,7 @@ function createCursorPlugin(awareness: Awareness) {
                 Math.min(anchor, head),
                 Math.max(anchor, head),
                 {
-                  style: `background-color: ${color}33; transition: all 0.1s ease;`
+                  style: `background-color: ${color}33; transition: all 0.1s ease;`,
                 },
               ),
             );
@@ -198,18 +199,22 @@ export default function Editor() {
   }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2 style={{ color: "white" }}>Editor</h2>
+    <div
+      style={{
+        maxWidth: "800px",
+        margin: "40px auto",
+        border: "1px solid #ddd",
+        borderRadius: "8px",
+        overflow: "hidden",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        background: "white",
+      }}
+    >
+      {/* Toolbar */}
+      <Toolbar editor={editor} />
 
-      <div
-        style={{
-          border: "2px solid red",
-          minHeight: "200px",
-          padding: "10px",
-          background: "white",
-          color: "black",
-        }}
-      >
+      {/* Editor Area */}
+      <div className="prose max-w-none">
         <EditorContent editor={editor} />
       </div>
     </div>
