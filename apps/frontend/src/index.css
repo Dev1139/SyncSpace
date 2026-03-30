@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.ProseMirror {
+  min-height: 200px;
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 0.5em 0;
+}

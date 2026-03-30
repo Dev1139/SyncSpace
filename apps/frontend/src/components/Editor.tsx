@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
@@ -7,7 +7,10 @@ import { Plugin } from "prosemirror-state";
 import * as awarenessProtocol from "y-protocols/awareness";
 import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
+import { Editor as TiptapEditor} from "@tiptap/core";
 import Toolbar from "./Toolbar";
+
+// import { BubbleMenu } from "@tiptap/react";
 
 const documentId = "e0e1e19a-50c2-4410-8c07-46f1450c4cce";
 
@@ -18,7 +21,6 @@ function createCursorPlugin(awareness: Awareness) {
         const decorations: any[] = [];
 
         awareness.getStates().forEach((clientState: any, clientId: number) => {
-          console.log("CLIENT STATE:", clientState);
           if (clientId === awareness.clientID) return;
           if (!clientState.cursor || !clientState.user) return;
 
@@ -26,39 +28,47 @@ function createCursorPlugin(awareness: Awareness) {
           const { name, color } = clientState.user;
 
           const cursor = document.createElement("span");
-          cursor.style.borderLeft = `2px solid ${color}`;
-          cursor.style.pointerEvents = "none";
-          cursor.style.zIndex = "10";
-          cursor.style.marginLeft = "-1px";
-          cursor.style.height = "100%";
-          cursor.style.display = "inline-block";
-          cursor.style.position = "relative";
-          cursor.style.transition = "all 0.1s ease";
+          cursor.style.position = "absolute";
+          cursor.style.background = color;
+          cursor.style.color = "white";
+          cursor.style.padding = "2px 6px";
+          cursor.style.fontSize = "12px";
+          cursor.style.borderRadius = "6px";
+          cursor.style.whiteSpace = "nowrap";
+          cursor.style.transform = "translateY(-100%)";
+          cursor.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
 
           const label = document.createElement("div");
           label.textContent = name;
           label.style.position = "absolute";
           label.style.top = "-24px";
-          label.style.whiteSpace = "nowrap";
           label.style.left = "0";
           label.style.background = color;
           label.style.color = "white";
-          label.style.fontSize = "10px";
-          label.style.padding = "2px 4px";
-          label.style.borderRadius = "4px";
+          label.style.fontSize = "11px";
+          label.style.padding = "4px 8px";
+          label.style.borderRadius = "8px";
+          label.style.boxShadow = "0 4px 10px rgba(0,0,0,0.15)";
+          label.style.fontWeight = "500";
+          label.style.transform = "translateY(-140%)";
+          label.style.pointerEvents = "none";
+          label.style.whiteSpace = "nowrap";
+          label.style.opacity = "0.95";
 
           cursor.appendChild(label);
+
           if (anchor !== head) {
             decorations.push(
               Decoration.inline(
                 Math.min(anchor, head),
                 Math.max(anchor, head),
                 {
-                  style: `background-color: ${color}33; transition: all 0.1s ease;`,
+                  style: `background-color: ${color}33`,
                 },
               ),
             );
           }
+
           decorations.push(
             Decoration.widget(anchor, cursor, {
               key: `cursor-${clientId}`,
@@ -75,36 +85,38 @@ function createCursorPlugin(awareness: Awareness) {
 export default function Editor() {
   const ydocRef = useRef(new Y.Doc());
   const ydoc = ydocRef.current;
+
   const awarenessRef = useRef(new Awareness(ydoc));
   const awareness = awarenessRef.current;
 
   const wsRef = useRef<WebSocket | null>(null);
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        history: false,
-      }),
-      Collaboration.configure({
-        document: ydoc,
-      }),
-    ],
-    editorProps: {
-      attributes: {
-        class: "editor",
-      },
-    },
-    onCreate({ editor }) {
-      editor.registerPlugin(createCursorPlugin(awareness));
-    },
-  });
+  const [editor, setEditor] = useState<any>(null);
+  useEffect(() => {
+    if (editor) return;
 
+    const newEditor = new TiptapEditor({
+      extensions: [
+        StarterKit.configure({ history: false }),
+        Collaboration.configure({ document: ydoc }),
+      ],
+      onCreate({ editor }) {
+        (editor as any).registerPlugin(createCursorPlugin(awareness));
+      },
+    });
+
+    setEditor(newEditor);
+  }, []);
   useEffect(() => {
     if (!editor) return;
+
+    // 👤 set user
     awareness.setLocalStateField("user", {
       name: "User " + Math.floor(Math.random() * 100),
       color: "#" + Math.floor(Math.random() * 16777215).toString(16),
     });
+
+    // 🧠 cursor tracking
     const updateCursor = () => {
       const { from, to } = editor.state.selection;
 
@@ -115,41 +127,14 @@ export default function Editor() {
     };
 
     editor.on("selectionUpdate", updateCursor);
-
     updateCursor();
 
+    // 🌐 WebSocket
     const ws = new WebSocket("ws://127.0.0.1:3001");
     wsRef.current = ws;
 
-    const handleAwarenessUpdate = ({ added, updated, removed }: any) => {
-      if (editor) {
-        editor.view.dispatch(editor.state.tr); // FORCED RE-RENDER
-      }
-      const changedClients = added.concat(updated).concat(removed);
-
-      const update = awarenessProtocol.encodeAwarenessUpdate(
-        awareness,
-        changedClients,
-      );
-
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "awareness-update",
-            data: {
-              documentId,
-              update: Array.from(update),
-            },
-          }),
-        );
-      }
-    };
-
-    awareness.on("update", handleAwarenessUpdate);
-
+    // 🔗 JOIN
     ws.onopen = () => {
-      console.log("Connected");
-
       ws.send(
         JSON.stringify({
           type: "join-document",
@@ -158,6 +143,7 @@ export default function Editor() {
       );
     };
 
+    // 📥 RECEIVE
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
 
@@ -171,9 +157,9 @@ export default function Editor() {
         awarenessProtocol.applyAwarenessUpdate(awareness, update, ws);
       }
     };
-    console.log("AWARENESS STATES:", awareness.getStates());
 
-    ydoc.on("update", (update: Uint8Array) => {
+    // 📤 SEND DOC UPDATES
+    const updateHandler = (update: Uint8Array) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(
           JSON.stringify({
@@ -185,37 +171,65 @@ export default function Editor() {
           }),
         );
       }
-    });
+    };
+
+    ydoc.on("update", updateHandler);
+
+    // 📤 SEND AWARENESS
+    const awarenessHandler = ({ added, updated, removed }: any) => {
+      const changed = added.concat(updated).concat(removed);
+
+      const update = awarenessProtocol.encodeAwarenessUpdate(
+        awareness,
+        changed,
+      );
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(
+          JSON.stringify({
+            type: "awareness-update",
+            data: {
+              documentId,
+              update: Array.from(update),
+            },
+          }),
+        );
+      }
+    };
+
+    awareness.on("update", awarenessHandler);
 
     return () => {
       editor.off("selectionUpdate", updateCursor);
-      awareness.off("update", handleAwarenessUpdate); // 🔥 IMPORTANT
-      ws.close();
+      ydoc.off("update", updateHandler);
+      awareness.off("update", awarenessHandler);
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
     };
   }, [editor]);
 
-  if (!editor) {
-    return <div style={{ color: "white" }}>Loading editor...</div>;
-  }
+  if (!editor) return <div>Loading editor...</div>;
 
   return (
-    <div
-      style={{
-        maxWidth: "800px",
-        margin: "40px auto",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        overflow: "hidden",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        background: "white",
-      }}
-    >
-      {/* Toolbar */}
-      <Toolbar editor={editor} />
+    <div className="min-h-screen bg-gray-50 py-10">
+      <div className="max-w-3xl mx-auto">
+        {/* Title */}
+        <h1 className="text-3xl font-semibold text-gray-800 mb-6">
+          Workspace Document
+        </h1>
 
-      {/* Editor Area */}
-      <div className="prose max-w-none">
-        <EditorContent editor={editor} />
+        {/* Editor Card */}
+        <div className="bg-white border rounded-lg shadow-sm p-6">
+          {/* Toolbar */}
+          <Toolbar editor={editor} />
+
+          {/* Editor */}
+          <div className="mt-4 prose prose-lg max-w-none">
+            <EditorContent editor={editor} />
+          </div>
+        </div>
       </div>
     </div>
   );
