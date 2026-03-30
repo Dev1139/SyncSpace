@@ -7,36 +7,49 @@ datasource db {
 }
 
 model User {
-  id        String              @id @default(uuid())
-  email     String              @unique
-  createdAt DateTime            @default(now())
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
 
   memberships WorkspaceMember[]
 }
 
 model Workspace {
-  id        String              @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  createdAt DateTime            @default(now())
+  createdAt DateTime @default(now())
 
   members   WorkspaceMember[]
+  documents Document[]
 }
 
 model WorkspaceMember {
-  id          String     @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String
   workspaceId String
   role        Role
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime @default(now())
 
-  user        User       @relation(fields: [userId], references: [id])
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
 
   @@unique([userId, workspaceId]) // prevent duplicates
+}
+
+model Document {
+  id          String   @id @default(uuid())
+  title       String
+  content     Bytes
+  plainText   String   @default("") // for search
+  workspaceId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
 }
 
 enum Role {
   owner
   editor
   viewer
-} 
+}

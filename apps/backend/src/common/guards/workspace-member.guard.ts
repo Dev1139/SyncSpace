@@ -13,7 +13,7 @@ export class WorkspaceMemberGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
-    const userId = request.user.userId; // temp (later JWT)
+    const userId = request.user.userId;
     const workspaceId = request.params.workspaceId;
 
     if (!userId || !workspaceId) {
