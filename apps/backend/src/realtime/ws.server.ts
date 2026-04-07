@@ -22,7 +22,10 @@ export async function createWSServer(prisma: PrismaService) {
 
   //  extract plain text
   const extractPlainText = (ydoc: Y.Doc): string => {
-    return ydoc.getText('content').toString();
+    const fragment = ydoc.getXmlFragment('content');
+
+    // convert XML → string
+    return fragment.toString();
   };
 
   // load from DB

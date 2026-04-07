@@ -7,12 +7,15 @@ import { Plugin } from "prosemirror-state";
 import * as awarenessProtocol from "y-protocols/awareness";
 import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
-import { Editor as TiptapEditor} from "@tiptap/core";
+import { Editor as TiptapEditor } from "@tiptap/core";
 import Toolbar from "./Toolbar";
 
 // import { BubbleMenu } from "@tiptap/react";
 
-const documentId = "e0e1e19a-50c2-4410-8c07-46f1450c4cce";
+type Props = {
+  documentId: string;
+};
+// const documentId = "dccdf1f9-04f2-45d9-86c6-8097b06a231d";
 
 function createCursorPlugin(awareness: Awareness) {
   return new Plugin({
@@ -82,13 +85,10 @@ function createCursorPlugin(awareness: Awareness) {
   });
 }
 
-export default function Editor() {
-  const ydocRef = useRef(new Y.Doc());
-  const ydoc = ydocRef.current;
+export default function Editor({ documentId }: Props) {
+  const ydocRef = useRef<Y.Doc>(new Y.Doc());
 
-  const awarenessRef = useRef(new Awareness(ydoc));
-  const awareness = awarenessRef.current;
-
+  const awarenessRef = useRef<Awareness | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   const [editor, setEditor] = useState<any>(null);
@@ -98,7 +98,10 @@ export default function Editor() {
     const newEditor = new TiptapEditor({
       extensions: [
         StarterKit.configure({ history: false }),
-        Collaboration.configure({ document: ydoc }),
+        Collaboration.configure({
+          document: ydocRef.current, // temporary fix
+          field: "content",
+        }),
       ],
       onCreate({ editor }) {
         (editor as any).registerPlugin(createCursorPlugin(awareness));
@@ -107,10 +110,25 @@ export default function Editor() {
 
     setEditor(newEditor);
   }, []);
-  useEffect(() => {
-    if (!editor) return;
 
-    // 👤 set user
+  useEffect(() => {
+    if (!editor || !documentId) return;
+
+    console.log("Switching document:", documentId);
+
+    // 🔥 CLEAN OLD CONNECTION
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+
+    // 🔥 CREATE NEW Y.Doc
+    const ydoc = ydocRef.current;
+    ydocRef.current = ydoc;
+
+    const awareness = new Awareness(ydoc);
+    awarenessRef.current = awareness;
+
+    // 👤 user identity
     awareness.setLocalStateField("user", {
       name: "User " + Math.floor(Math.random() * 100),
       color: "#" + Math.floor(Math.random() * 16777215).toString(16),
@@ -149,7 +167,7 @@ export default function Editor() {
 
       if (msg.type === "sync" || msg.type === "doc-update") {
         const update = new Uint8Array(msg.update);
-        Y.applyUpdate(ydoc, update);
+        Y.applyUpdate(ydoc, update, "remote");
       }
 
       if (msg.type === "awareness-update") {
@@ -159,7 +177,9 @@ export default function Editor() {
     };
 
     // 📤 SEND DOC UPDATES
-    const updateHandler = (update: Uint8Array) => {
+    const updateHandler = (update: Uint8Array, origin: any) => {
+      if (origin === "remote") return;
+
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(
           JSON.stringify({
@@ -199,6 +219,7 @@ export default function Editor() {
 
     awareness.on("update", awarenessHandler);
 
+    // 🧹 CLEANUP
     return () => {
       editor.off("selectionUpdate", updateCursor);
       ydoc.off("update", updateHandler);
@@ -208,7 +229,7 @@ export default function Editor() {
         ws.close();
       }
     };
-  }, [editor]);
+  }, [editor, documentId]);
 
   if (!editor) return <div>Loading editor...</div>;
 
