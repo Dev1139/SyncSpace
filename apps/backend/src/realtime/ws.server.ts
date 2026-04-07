@@ -102,7 +102,30 @@ export async function createWSServer(prisma: PrismaService) {
             });
           }
         }
+        // 🔥 TITLE CHANGE (FIXED)
+        if (type === 'title-change') {
+          const { documentId, title } = data;
 
+          console.log('TITLE UPDATE RECEIVED:', title);
+
+          const clients = rooms.get(documentId);
+
+          if (clients) {
+            clients.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(
+                  JSON.stringify({
+                    type: 'title-change',
+                    data: {
+                      documentId,
+                      title,
+                    },
+                  }),
+                );
+              }
+            });
+          }
+        }
         //  DOCUMENT UPDATE
         if (type === 'doc-update') {
           console.log('UPDATE RECEIVED:', data);

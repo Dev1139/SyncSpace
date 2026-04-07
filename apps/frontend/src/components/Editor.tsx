@@ -86,12 +86,64 @@ function createCursorPlugin(awareness: Awareness) {
 }
 
 export default function Editor({ documentId }: Props) {
+  const [title, setTitle] = useState("Workspace Document");
+  const [users, setUsers] = useState<any[]>([]);
   const ydocRef = useRef<Y.Doc>(new Y.Doc());
+  const documentIdRef = useRef(documentId);
 
   const awarenessRef = useRef<Awareness | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   const [editor, setEditor] = useState<any>(null);
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    documentIdRef.current = documentId;
+  }, [documentId]);
+
+  useEffect(() => {
+    if (!documentId) return;
+
+    const fetchTitle = async () => {
+      const res = await fetch(`http://localhost:3000/document/${documentId}`, {
+        headers: {
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwZGQ5MTZmZi04NmM1LTRlMmQtODdjOS1iYmQwY2Q1MmZjZjciLCJlbWFpbCI6InVzZXJBQHRlc3QuY29tIiwiaWF0IjoxNzc1NDc0Nzk5LCJleHAiOjE3NzU1NjExOTl9.UdwYjNAeSPo2BcTdffI-xyfSigW8DYoRMs_u-GThO_Q`,
+        },
+      });
+      const data = await res.json();
+      console.log("Fetched Doc: ", data);
+      setTitle(data.data.title || "Untitled Document");
+      isFirstLoad.current = true;
+    };
+
+    fetchTitle();
+  }, [documentId]);
+
+  useEffect(() => {
+    if (!documentId) return;
+
+    if (!title || title.trim() === "") return;
+
+    // skip first load (VERY IMPORTANT)
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      await fetch(`http://localhost:3000/document/${documentId}/title`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwZGQ5MTZmZi04NmM1LTRlMmQtODdjOS1iYmQwY2Q1MmZjZjciLCJlbWFpbCI6InVzZXJBQHRlc3QuY29tIiwiaWF0IjoxNzc1NDc0Nzk5LCJleHAiOjE3NzU1NjExOTl9.UdwYjNAeSPo2BcTdffI-xyfSigW8DYoRMs_u-GThO_Q`,
+        },
+        body: JSON.stringify({ title }),
+      });
+    }, 800);
+
+    return () => clearTimeout(timeout);
+  }, [title]);
+
   useEffect(() => {
     if (editor) return;
 
@@ -103,9 +155,7 @@ export default function Editor({ documentId }: Props) {
           field: "content",
         }),
       ],
-      onCreate({ editor }) {
-        (editor as any).registerPlugin(createCursorPlugin(awareness));
-      },
+      onCreate() {},
     });
 
     setEditor(newEditor);
@@ -126,6 +176,7 @@ export default function Editor({ documentId }: Props) {
     ydocRef.current = ydoc;
 
     const awareness = new Awareness(ydoc);
+    (editor as any).registerPlugin(createCursorPlugin(awareness));
     awarenessRef.current = awareness;
 
     // 👤 user identity
@@ -165,6 +216,14 @@ export default function Editor({ documentId }: Props) {
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
 
+      if (msg.type === "title-change") {
+        const { documentId: incomingId, title: incomingTitle } = msg.data;
+
+        if (incomingId === documentIdRef.current) {
+          setTitle(incomingTitle);
+        }
+      }
+
       if (msg.type === "sync" || msg.type === "doc-update") {
         const update = new Uint8Array(msg.update);
         Y.applyUpdate(ydoc, update, "remote");
@@ -198,6 +257,11 @@ export default function Editor({ documentId }: Props) {
     // 📤 SEND AWARENESS
     const awarenessHandler = ({ added, updated, removed }: any) => {
       const changed = added.concat(updated).concat(removed);
+      const states = Array.from(awareness.getStates().values());
+
+      const userList = states.map((s: any) => s.user).filter(Boolean);
+
+      setUsers(userList);
 
       const update = awarenessProtocol.encodeAwarenessUpdate(
         awareness,
@@ -235,21 +299,53 @@ export default function Editor({ documentId }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-3xl mx-auto">
-        {/* Title */}
-        <h1 className="text-3xl font-semibold text-gray-800 mb-6">
-          Workspace Document
-        </h1>
+      <div className="flex items-center justify-between mb-4">
+        <input
+          value={title === "Untitled Document" ? "" : title}
+          onChange={(e) => {
+            const newTitle = e.target.value;
 
-        {/* Editor Card */}
-        <div className="bg-white border rounded-lg shadow-sm p-6">
-          {/* Toolbar */}
-          <Toolbar editor={editor} />
+            setTitle(newTitle);
 
-          {/* Editor */}
-          <div className="mt-4 prose prose-lg max-w-none">
-            <EditorContent editor={editor} />
-          </div>
+            wsRef.current?.send(
+              JSON.stringify({
+                type: "title-change",
+                data: {
+                  documentId,
+                  title: newTitle,
+                },
+              }),
+            );
+          }}
+          onBlur={() => {
+            if (!title.trim()) {
+              setTitle("Untitled Document");
+            }
+          }}
+          className="text-xl font-semibold outline-none border-none bg-transparent"
+          placeholder="Untitled Document"
+        />
+
+        <div className="flex gap-2">
+          {users.map((user, index) => (
+            <div
+              key={index}
+              className="text-white text-xs px-3 py-1 rounded-full"
+              style={{ backgroundColor: user.color }}
+            >
+              {user.name}
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Editor Card */}
+      <div className="bg-white border rounded-lg shadow-sm p-6">
+        {/* Toolbar */}
+        <Toolbar editor={editor} />
+
+        {/* Editor */}
+        <div className="mt-4 prose prose-lg max-w-none">
+          <EditorContent editor={editor} />
         </div>
       </div>
     </div>

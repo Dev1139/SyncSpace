@@ -65,4 +65,18 @@ export class DocumentController {
 
     return this.documentService.updateDocument(documentId, content, plainText);
   }
+
+  @Patch(':documentId/title')
+  @UseGuards(JwtAuthGuard, DocumentAccessGuard)
+  updateTitle(
+    @Param('documentId') documentId: string,
+    @Body('title') title: string,
+    @Req() req: any,
+  ) {
+    if (req.workspaceRole === 'viewer') {
+      throw new ForbiddenException('No edit permission');
+    }
+
+    return this.documentService.updateTitle(documentId, title);
+  }
 }
