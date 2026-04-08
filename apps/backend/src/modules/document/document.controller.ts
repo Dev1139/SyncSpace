@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -78,5 +79,15 @@ export class DocumentController {
     }
 
     return this.documentService.updateTitle(documentId, title);
+  }
+
+  @Delete(':documentId')
+  @UseGuards(JwtAuthGuard, DocumentAccessGuard)
+  delete(@Param('documentId') documentId: string, @Req() req: any) {
+    if (req.workspaceRole === 'viewer') {
+      throw new ForbiddenException('No delete permission');
+    }
+
+    return this.documentService.deleteDocument(documentId);
   }
 }

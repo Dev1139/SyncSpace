@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor from "./components/Editor";
 import Sidebar from "./components/Sidebar";
 import { useWS } from "./context/WebContextProvider";
@@ -10,15 +10,14 @@ type Doc = {
 
 function App() {
   const wsContext = useWS();
-
-
+  const hasFetched = useRef(false);
   const ws = wsContext?.ws;
   const addListener = wsContext?.addListener;
   const removeListener = wsContext?.removeListener;
+  const [search, setSearch] = useState("");
 
   const [documents, setDocuments] = useState<Doc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
-  
 
   useEffect(() => {
     if (!ws) return;
@@ -38,34 +37,128 @@ function App() {
     return () => removeListener(handler);
   }, [ws, addListener, removeListener]);
 
-  
-
   // Fetch documents
-  useEffect(() => {
-    fetch(
-      "http://localhost:3000/document/workspaces/87c3452e-5217-4223-9f0c-24a7800add04/documents",
+  const fetchDocuments = async (searchValue = "") => {
+    const res = await fetch(
+      `http://localhost:3000/document/workspaces/87c3452e-5217-4223-9f0c-24a7800add04/documents?search=${searchValue}`,
       {
         headers: {
           Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
         },
       },
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data?.success) {
-          console.error("API Error : ", data.message);
-        }
-        const items = data?.data.items || [];
+    );
 
-        setDocuments(items);
+    const data = await res.json();
+    const items = data?.data.items || [];
 
-        if (items.length > 0) {
-          setSelectedDoc(items[0].id);
-        }
+    // 🔥 KEY FIX
+    if (searchValue) {
+      // replace completely for search
+      setDocuments(items);
+    } else {
+      // merge only for normal fetch
+      setDocuments((prev) => {
+        const map = new Map(prev.map((doc) => [doc.id, doc]));
+
+        items.forEach((doc: any) => {
+          map.set(doc.id, doc);
+        });
+
+        return Array.from(map.values());
       });
+    }
+
+    if (items.length > 0 && !selectedDoc) {
+      setSelectedDoc(items[0].id);
+    }
+  };
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      fetchDocuments(search);
+    }, 300);
+
+    return () => clearTimeout(delay);
+  }, [search]);
+
+  useEffect(() => {
+    if (hasFetched.current) return;
+
+    hasFetched.current = true;
+    fetchDocuments();
   }, []);
 
   const currentDoc = documents.find((doc) => doc.id === selectedDoc);
+
+  const handleCreateDocument = async () => {
+    const res = await fetch(
+      "http://localhost:3000/document/workspaces/87c3452e-5217-4223-9f0c-24a7800add04/documents",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
+        },
+        body: JSON.stringify({ title: "Untitled Document" }),
+      },
+    );
+
+    const response = await res.json();
+    console.log("CREATE RESPONSE:", response);
+
+    // handle both formats safely
+    const newDoc = response.data || response;
+
+    if (!newDoc?.id) return;
+
+    const doc = {
+      id: newDoc.id,
+      title: newDoc.title,
+    };
+
+    //  INSTANT UI UPDATE
+    setDocuments((prev) => [doc, ...prev]);
+
+    //  SELECT NEW DOC
+    setSelectedDoc(doc.id);
+  };
+
+  const handleDeleteDocument = async (id: string) => {
+    await fetch(`http://localhost:3000/document/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
+      },
+    });
+
+    setDocuments((prev) => {
+      const updated = prev.filter((doc) => doc.id !== id);
+
+      if (selectedDoc === id) {
+        setSelectedDoc(updated.length > 0 ? updated[0].id : null);
+      }
+
+      return updated;
+    });
+  };
+
+  const handleRenameDocument = async (id: string, title: string) => {
+    if (!title.trim()) return;
+
+    //  Optimistic update
+    setDocuments((prev) =>
+      prev.map((doc) => (doc.id === id ? { ...doc, title } : doc)),
+    );
+
+    //  API call
+    await fetch(`http://localhost:3000/document/${id}/title`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
+      },
+      body: JSON.stringify({ title }),
+    });
+  };
 
   return (
     <div className="flex h-screen">
@@ -74,16 +167,17 @@ function App() {
         documents={documents}
         selectedDoc={selectedDoc}
         onSelect={setSelectedDoc}
+        onCreate={handleCreateDocument}
+        onDelete={handleDeleteDocument}
+        onRename={handleRenameDocument}
+        onSearch={setSearch}
+        search={search}
       />
 
       {/* Editor */}
       <div className="flex-1">
         {selectedDoc ? (
-          <Editor
-            key={selectedDoc}
-            documentId={selectedDoc}
-            title={currentDoc?.title || ""}
-          />
+          <Editor documentId={selectedDoc} title={currentDoc?.title || ""} />
         ) : (
           <div className="p-6">Select a document</div>
         )}

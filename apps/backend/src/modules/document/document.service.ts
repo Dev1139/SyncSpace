@@ -94,4 +94,10 @@ export class DocumentService {
       data: { title },
     });
   }
+
+  async deleteDocument(documentId: string) {
+    return this.prisma.document.delete({
+      where: { id: documentId },
+    });
+  }
 }
