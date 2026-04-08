@@ -92,6 +92,7 @@ export default function Editor({ documentId, title }: Props) {
   const ws = wsContext?.ws;
   const addListener = wsContext?.addListener;
   const removeListener = wsContext?.removeListener;
+  const send = wsContext?.send;
 
   const [localTitle, setLocalTitle] = useState("Untitled Document");
 
@@ -112,19 +113,19 @@ export default function Editor({ documentId, title }: Props) {
     if (!ws) return;
 
     const handler = (msg: any) => {
-      // 🔥 INITIAL LOAD
+      //  INITIAL LOAD
       if (msg.type === "sync") {
         const update = new Uint8Array(msg.update);
         Y.applyUpdate(ydocRef.current, update, "remote");
       }
 
-      // 🔥 REALTIME UPDATE
+      //  REALTIME UPDATE
       if (msg.type === "doc-update") {
         const update = new Uint8Array(msg.update);
         Y.applyUpdate(ydocRef.current, update, "remote");
       }
 
-      // 🔥 AWARENESS
+      //  AWARENESS
       if (msg.type === "awareness-update") {
         const update = new Uint8Array(msg.update);
 
@@ -148,12 +149,10 @@ export default function Editor({ documentId, title }: Props) {
   useEffect(() => {
     if (!ws || !documentId) return;
 
-    ws.send(
-      JSON.stringify({
-        type: "join-document",
-        data: documentId,
-      }),
-    );
+    send({
+      type: "join-document",
+      data: documentId,
+    });
   }, [ws, documentId]);
 
   useEffect(() => {
@@ -197,35 +196,40 @@ export default function Editor({ documentId, title }: Props) {
     }, 800);
 
     return () => clearTimeout(timeout);
-  }, [title]);
+  }, [localTitle]);
 
   useEffect(() => {
-    if (editor) return;
+    if (!documentId) return;
+
+    console.log("Creating editor for:", documentId);
+
+    // 🔥 fresh Y.Doc
+    const ydoc = new Y.Doc();
+    ydocRef.current = ydoc;
 
     const newEditor = new TiptapEditor({
       extensions: [
         StarterKit.configure({ history: false }),
         Collaboration.configure({
-          document: ydocRef.current, // temporary fix
+          document: ydoc,
           field: "content",
         }),
       ],
-      onCreate() {},
     });
 
     setEditor(newEditor);
-  }, []);
+
+    return () => {
+      newEditor.destroy();
+    };
+  }, [documentId]);
 
   useEffect(() => {
     if (!editor || !documentId) return;
 
     console.log("Switching document:", documentId);
 
-    // 🔥 CLEAN OLD CONNECTION
-
-    // 🔥 CREATE NEW Y.Doc
     const ydoc = ydocRef.current;
-    ydocRef.current = ydoc;
 
     const awareness = new Awareness(ydoc);
     (editor as any).registerPlugin(createCursorPlugin(awareness));
@@ -254,17 +258,13 @@ export default function Editor({ documentId, title }: Props) {
     const updateHandler = (update: Uint8Array, origin: any) => {
       if (origin === "remote") return;
 
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(
-          JSON.stringify({
-            type: "doc-update",
-            data: {
-              documentId,
-              update: Array.from(update),
-            },
-          }),
-        );
-      }
+      send?.({
+        type: "doc-update",
+        data: {
+          documentId,
+          update: Array.from(update),
+        },
+      });
     };
 
     ydoc.on("update", updateHandler);
@@ -283,17 +283,13 @@ export default function Editor({ documentId, title }: Props) {
         changed,
       );
 
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(
-          JSON.stringify({
-            type: "awareness-update",
-            data: {
-              documentId,
-              update: Array.from(update),
-            },
-          }),
-        );
-      }
+      send?.({
+        type: "awareness-update",
+        data: {
+          documentId,
+          update: Array.from(update),
+        },
+      });
     };
 
     awareness.on("update", awarenessHandler);
@@ -317,15 +313,13 @@ export default function Editor({ documentId, title }: Props) {
             const newTitle = e.target.value;
             setLocalTitle(newTitle);
 
-            ws?.send(
-              JSON.stringify({
-                type: "title-change",
-                data: {
-                  documentId,
-                  title: newTitle,
-                },
-              }),
-            );
+            send?.({
+              type: "title-change",
+              data: {
+                documentId,
+                title: newTitle,
+              },
+            });
           }}
           onBlur={() => {
             if (!title.trim()) {

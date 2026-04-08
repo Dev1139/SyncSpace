@@ -102,7 +102,7 @@ export async function createWSServer(prisma: PrismaService) {
             });
           }
         }
-        // 🔥 TITLE CHANGE (FIXED)
+        //  TITLE CHANGE (FIXED)
         if (type === 'title-change') {
           const { documentId, title } = data;
 

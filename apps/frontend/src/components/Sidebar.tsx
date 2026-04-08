@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 type Doc = {
   id: string;
   title: string;
@@ -12,13 +10,7 @@ type Props = {
   onTitleUpdate: (id: string, title: string) => void;
 };
 
-export default function Sidebar({
-  documents,
-  selectedDoc,
-  onSelect,
-  onTitleUpdate,
-}: Props) {
-  
+export default function Sidebar({ documents, selectedDoc, onSelect }: Props) {
   return (
     <div className="w-64 border-r bg-white p-4">
       <h2 className="font-semibold mb-4">Documents</h2>

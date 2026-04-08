@@ -28,7 +28,7 @@ async function bootstrap() {
 
   const prisma = app.get(PrismaService);
 
-  // 🔥 START WS SERVER
+  //  START WS SERVER
   createWSServer(prisma);
 
   await app.listen(process.env.PORT ?? 3000);

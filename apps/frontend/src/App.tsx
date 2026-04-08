@@ -18,11 +18,7 @@ function App() {
 
   const [documents, setDocuments] = useState<Doc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
-  const handleTitleUpdate = (id: string, title: string) => {
-    setDocuments((prev) =>
-      prev.map((doc) => (doc.id === id ? { ...doc, title } : doc)),
-    );
-  };
+  
 
   useEffect(() => {
     if (!ws) return;
@@ -40,7 +36,7 @@ function App() {
     addListener(handler);
 
     return () => removeListener(handler);
-  }, [ws]);
+  }, [ws, addListener, removeListener]);
 
   
 
@@ -78,7 +74,6 @@ function App() {
         documents={documents}
         selectedDoc={selectedDoc}
         onSelect={setSelectedDoc}
-        onTitleUpdate={handleTitleUpdate}
       />
 
       {/* Editor */}

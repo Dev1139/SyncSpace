@@ -8,7 +8,7 @@ export default function Toolbar({ editor }: any) {
     if (!editor) return;
 
     const update = () => {
-      setUpdate((prev) => prev + 1); // 🔥 force re-render
+      setUpdate((prev) => prev + 1); //  force re-render
     };
 
     editor.on("selectionUpdate", update);
