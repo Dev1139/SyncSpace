@@ -87,13 +87,17 @@ function createCursorPlugin(awareness: Awareness) {
 }
 
 export default function Editor({ documentId, title }: Props) {
-  const ws = useWS();
+  const wsContext = useWS();
+
+  const ws = wsContext?.ws;
+  const addListener = wsContext?.addListener;
+  const removeListener = wsContext?.removeListener;
+
   const [localTitle, setLocalTitle] = useState("Untitled Document");
 
   useEffect(() => {
     setLocalTitle(title);
   }, [title]);
-
 
   const [users, setUsers] = useState<any[]>([]);
   const ydocRef = useRef<Y.Doc>(new Y.Doc());
@@ -103,6 +107,39 @@ export default function Editor({ documentId, title }: Props) {
 
   const [editor, setEditor] = useState<any>(null);
   const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    if (!ws) return;
+
+    const handler = (msg: any) => {
+      // 🔥 INITIAL LOAD
+      if (msg.type === "sync") {
+        const update = new Uint8Array(msg.update);
+        Y.applyUpdate(ydocRef.current, update, "remote");
+      }
+
+      // 🔥 REALTIME UPDATE
+      if (msg.type === "doc-update") {
+        const update = new Uint8Array(msg.update);
+        Y.applyUpdate(ydocRef.current, update, "remote");
+      }
+
+      // 🔥 AWARENESS
+      if (msg.type === "awareness-update") {
+        const update = new Uint8Array(msg.update);
+
+        awarenessProtocol.applyAwarenessUpdate(
+          awarenessRef.current!,
+          update,
+          ws,
+        );
+      }
+    };
+
+    addListener(handler);
+
+    return () => removeListener(handler);
+  }, [ws]);
 
   useEffect(() => {
     documentIdRef.current = documentId;
@@ -130,7 +167,7 @@ export default function Editor({ documentId, title }: Props) {
       });
       const data = await res.json();
       console.log("Fetched Doc: ", data);
-      setTitle(data.data.title || "Untitled Document");
+      setLocalTitle(data.data.title || "Untitled Document");
       isFirstLoad.current = true;
     };
 

@@ -9,7 +9,13 @@ type Doc = {
 };
 
 function App() {
-  const ws = useWS();
+  const wsContext = useWS();
+
+
+  const ws = wsContext?.ws;
+  const addListener = wsContext?.addListener;
+  const removeListener = wsContext?.removeListener;
+
   const [documents, setDocuments] = useState<Doc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const handleTitleUpdate = (id: string, title: string) => {
@@ -21,9 +27,7 @@ function App() {
   useEffect(() => {
     if (!ws) return;
 
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-
+    const handler = (msg: any) => {
       if (msg.type === "title-change") {
         const { documentId, title } = msg.data;
 
@@ -32,20 +36,13 @@ function App() {
         );
       }
     };
+
+    addListener(handler);
+
+    return () => removeListener(handler);
   }, [ws]);
 
-  useEffect(() => {
-    if (!ws || documents.length === 0) return;
-
-    documents.forEach((doc) => {
-      ws.send(
-        JSON.stringify({
-          type: "join-document",
-          data: doc.id,
-        }),
-      );
-    });
-  }, [ws, documents]);
+  
 
   // Fetch documents
   useEffect(() => {
@@ -87,7 +84,11 @@ function App() {
       {/* Editor */}
       <div className="flex-1">
         {selectedDoc ? (
-          <Editor key={selectedDoc} documentId={selectedDoc} title={currentDoc?.title || ""}/>
+          <Editor
+            key={selectedDoc}
+            documentId={selectedDoc}
+            title={currentDoc?.title || ""}
+          />
         ) : (
           <div className="p-6">Select a document</div>
         )}
