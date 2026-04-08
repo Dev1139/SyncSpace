@@ -10,4 +10,9 @@ export class AuthController {
   register(@Body() body: RegisterDto) {
     return this.authService.register(body.email);
   }
+
+  @Post('login')
+  login(@Body() body: { email: string }) {
+    return this.authService.login(body.email);
+  }
 }

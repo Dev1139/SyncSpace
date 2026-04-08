@@ -32,4 +32,24 @@ export class AuthService {
       throw error;
     }
   }
+
+  async login(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
+
+    return {
+      user,
+      access_token: token,
+    };
+  }
 }

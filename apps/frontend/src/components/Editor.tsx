@@ -9,11 +9,12 @@ import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 import { Editor as TiptapEditor } from "@tiptap/core";
 import Toolbar from "./Toolbar";
-
+import { useWS } from "../context/WebContextProvider";
 // import { BubbleMenu } from "@tiptap/react";
 
 type Props = {
   documentId: string;
+  title: string;
 };
 // const documentId = "dccdf1f9-04f2-45d9-86c6-8097b06a231d";
 
@@ -85,14 +86,20 @@ function createCursorPlugin(awareness: Awareness) {
   });
 }
 
-export default function Editor({ documentId }: Props) {
-  const [title, setTitle] = useState("Workspace Document");
+export default function Editor({ documentId, title }: Props) {
+  const ws = useWS();
+  const [localTitle, setLocalTitle] = useState("Untitled Document");
+
+  useEffect(() => {
+    setLocalTitle(title);
+  }, [title]);
+
+
   const [users, setUsers] = useState<any[]>([]);
   const ydocRef = useRef<Y.Doc>(new Y.Doc());
   const documentIdRef = useRef(documentId);
 
   const awarenessRef = useRef<Awareness | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
 
   const [editor, setEditor] = useState<any>(null);
   const isFirstLoad = useRef(true);
@@ -102,12 +109,23 @@ export default function Editor({ documentId }: Props) {
   }, [documentId]);
 
   useEffect(() => {
+    if (!ws || !documentId) return;
+
+    ws.send(
+      JSON.stringify({
+        type: "join-document",
+        data: documentId,
+      }),
+    );
+  }, [ws, documentId]);
+
+  useEffect(() => {
     if (!documentId) return;
 
     const fetchTitle = async () => {
       const res = await fetch(`http://localhost:3000/document/${documentId}`, {
         headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwZGQ5MTZmZi04NmM1LTRlMmQtODdjOS1iYmQwY2Q1MmZjZjciLCJlbWFpbCI6InVzZXJBQHRlc3QuY29tIiwiaWF0IjoxNzc1NDc0Nzk5LCJleHAiOjE3NzU1NjExOTl9.UdwYjNAeSPo2BcTdffI-xyfSigW8DYoRMs_u-GThO_Q`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
         },
       });
       const data = await res.json();
@@ -135,7 +153,7 @@ export default function Editor({ documentId }: Props) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwZGQ5MTZmZi04NmM1LTRlMmQtODdjOS1iYmQwY2Q1MmZjZjciLCJlbWFpbCI6InVzZXJBQHRlc3QuY29tIiwiaWF0IjoxNzc1NDc0Nzk5LCJleHAiOjE3NzU1NjExOTl9.UdwYjNAeSPo2BcTdffI-xyfSigW8DYoRMs_u-GThO_Q`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
         },
         body: JSON.stringify({ title }),
       });
@@ -167,9 +185,6 @@ export default function Editor({ documentId }: Props) {
     console.log("Switching document:", documentId);
 
     // 🔥 CLEAN OLD CONNECTION
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
 
     // 🔥 CREATE NEW Y.Doc
     const ydoc = ydocRef.current;
@@ -197,43 +212,6 @@ export default function Editor({ documentId }: Props) {
 
     editor.on("selectionUpdate", updateCursor);
     updateCursor();
-
-    // 🌐 WebSocket
-    const ws = new WebSocket("ws://127.0.0.1:3001");
-    wsRef.current = ws;
-
-    // 🔗 JOIN
-    ws.onopen = () => {
-      ws.send(
-        JSON.stringify({
-          type: "join-document",
-          data: documentId,
-        }),
-      );
-    };
-
-    // 📥 RECEIVE
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-
-      if (msg.type === "title-change") {
-        const { documentId: incomingId, title: incomingTitle } = msg.data;
-
-        if (incomingId === documentIdRef.current) {
-          setTitle(incomingTitle);
-        }
-      }
-
-      if (msg.type === "sync" || msg.type === "doc-update") {
-        const update = new Uint8Array(msg.update);
-        Y.applyUpdate(ydoc, update, "remote");
-      }
-
-      if (msg.type === "awareness-update") {
-        const update = new Uint8Array(msg.update);
-        awarenessProtocol.applyAwarenessUpdate(awareness, update, ws);
-      }
-    };
 
     // 📤 SEND DOC UPDATES
     const updateHandler = (update: Uint8Array, origin: any) => {
@@ -288,10 +266,6 @@ export default function Editor({ documentId }: Props) {
       editor.off("selectionUpdate", updateCursor);
       ydoc.off("update", updateHandler);
       awareness.off("update", awarenessHandler);
-
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
     };
   }, [editor, documentId]);
 
@@ -301,13 +275,12 @@ export default function Editor({ documentId }: Props) {
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="flex items-center justify-between mb-4">
         <input
-          value={title === "Untitled Document" ? "" : title}
+          value={localTitle === "Untitled Document" ? "" : localTitle}
           onChange={(e) => {
             const newTitle = e.target.value;
+            setLocalTitle(newTitle);
 
-            setTitle(newTitle);
-
-            wsRef.current?.send(
+            ws?.send(
               JSON.stringify({
                 type: "title-change",
                 data: {
@@ -319,7 +292,7 @@ export default function Editor({ documentId }: Props) {
           }}
           onBlur={() => {
             if (!title.trim()) {
-              setTitle("Untitled Document");
+              setLocalTitle("Untitled Document");
             }
           }}
           className="text-xl font-semibold outline-none border-none bg-transparent"
