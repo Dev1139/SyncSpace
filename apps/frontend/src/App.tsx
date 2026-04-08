@@ -14,6 +14,7 @@ function App() {
   const ws = wsContext?.ws;
   const addListener = wsContext?.addListener;
   const removeListener = wsContext?.removeListener;
+  const send = wsContext?.send;
   const [search, setSearch] = useState("");
 
   const [documents, setDocuments] = useState<Doc[]>([]);
@@ -29,6 +30,25 @@ function App() {
         setDocuments((prev) =>
           prev.map((doc) => (doc.id === documentId ? { ...doc, title } : doc)),
         );
+      }
+
+      if (msg.type === "document-created") {
+        const doc = msg.data;
+
+        setDocuments((prev) => {
+          if (prev.find((d) => d.id === doc.id)) return prev;
+          return [doc, ...prev];
+        });
+      }
+
+      if (msg.type === "document-deleted") {
+        const { documentId } = msg.data;
+
+        setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+
+        if (selectedDoc === documentId) {
+          setSelectedDoc(null);
+        }
       }
     };
 
@@ -51,7 +71,7 @@ function App() {
     const data = await res.json();
     const items = data?.data.items || [];
 
-    // 🔥 KEY FIX
+    //  KEY FIX
     if (searchValue) {
       // replace completely for search
       setDocuments(items);
@@ -120,6 +140,14 @@ function App() {
 
     //  SELECT NEW DOC
     setSelectedDoc(doc.id);
+
+    send?.({
+      type: "document-created",
+      data: {
+        workspaceId: "87c3452e-5217-4223-9f0c-24a7800add04",
+        document: doc,
+      },
+    });
   };
 
   const handleDeleteDocument = async (id: string) => {
@@ -139,6 +167,14 @@ function App() {
 
       return updated;
     });
+
+    send?.({
+      type: "document-deleted",
+      data: {
+        workspaceId: "87c3452e-5217-4223-9f0c-24a7800add04",
+        documentId: id,
+      },
+    });
   };
 
   const handleRenameDocument = async (id: string, title: string) => {
@@ -157,6 +193,15 @@ function App() {
         Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
       },
       body: JSON.stringify({ title }),
+    });
+
+    send?.({
+      type: "title-change",
+      data: {
+        documentId: id,
+        title,
+        workspaceId: "87c3452e-5217-4223-9f0c-24a7800add04",
+      },
     });
   };
 

@@ -151,7 +151,10 @@ export default function Editor({ documentId, title }: Props) {
 
     send({
       type: "join-document",
-      data: documentId,
+      data: {
+        documentId,
+        workspaceId: "87c3452e-5217-4223-9f0c-24a7800add04",
+      },
     });
   }, [ws, documentId]);
 

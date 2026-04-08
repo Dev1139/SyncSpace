@@ -12,6 +12,20 @@ export async function createWSServer(prisma: PrismaService) {
   const rooms = new Map<string, Set<WebSocket>>();
   const saveTimers = new Map<string, NodeJS.Timeout>();
 
+  const workspaceRooms = new Map<string, Set<WebSocket>>();
+
+  const broadcastToWorkspace = (workspaceId: string, message: any) => {
+    const clients = workspaceRooms.get(workspaceId);
+
+    if (!clients) return;
+
+    clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(message));
+      }
+    });
+  };
+
   // get or create doc
   const getYDoc = (documentId: string): Y.Doc => {
     if (!docs.has(documentId)) {
@@ -61,16 +75,21 @@ export async function createWSServer(prisma: PrismaService) {
 
         // JOIN DOCUMENT
         if (type === 'join-document') {
-          const documentId = data;
+          const { documentId, workspaceId } = data;
 
+          // document room (existing)
           if (!rooms.has(documentId)) {
             rooms.set(documentId, new Set());
           }
-
           rooms.get(documentId)!.add(ws);
 
-          const ydoc = await loadDocument(documentId);
+          // 🔥 ADD THIS (workspace room)
+          if (!workspaceRooms.has(workspaceId)) {
+            workspaceRooms.set(workspaceId, new Set());
+          }
+          workspaceRooms.get(workspaceId)!.add(ws);
 
+          const ydoc = await loadDocument(documentId);
           const state = Y.encodeStateAsUpdate(ydoc);
 
           ws.send(
@@ -79,8 +98,6 @@ export async function createWSServer(prisma: PrismaService) {
               update: Array.from(state),
             }),
           );
-
-          console.log(`Joined document: ${documentId}`);
         }
 
         // AWARENESS UPDATE
@@ -104,28 +121,38 @@ export async function createWSServer(prisma: PrismaService) {
         }
         //  TITLE CHANGE (FIXED)
         if (type === 'title-change') {
-          const { documentId, title } = data;
+          const { documentId, title, workspaceId } = data;
 
           console.log('TITLE UPDATE RECEIVED:', title);
 
-          const clients = rooms.get(documentId);
-
-          if (clients) {
-            clients.forEach((client) => {
-              if (client.readyState === WebSocket.OPEN) {
-                client.send(
-                  JSON.stringify({
-                    type: 'title-change',
-                    data: {
-                      documentId,
-                      title,
-                    },
-                  }),
-                );
-              }
-            });
-          }
+          //  broadcast to WORKSPACE (not document room)
+          broadcastToWorkspace(workspaceId, {
+            type: 'title-change',
+            data: {
+              documentId,
+              title,
+            },
+          });
         }
+
+        if (type === 'document-created') {
+          const { workspaceId, document } = data;
+
+          broadcastToWorkspace(workspaceId, {
+            type: 'document-created',
+            data: document,
+          });
+        }
+
+        if (type === 'document-deleted') {
+          const { workspaceId, documentId } = data;
+
+          broadcastToWorkspace(workspaceId, {
+            type: 'document-deleted',
+            data: { documentId },
+          });
+        }
+
         //  DOCUMENT UPDATE
         if (type === 'doc-update') {
           console.log('UPDATE RECEIVED:', data);
