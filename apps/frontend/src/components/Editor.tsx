@@ -164,7 +164,7 @@ export default function Editor({ documentId, title }: Props) {
     const fetchTitle = async () => {
       const res = await fetch(`http://localhost:3000/document/${documentId}`, {
         headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTczOTIzNywiZXhwIjoxNzc1ODI1NjM3fQ.4e9WKv_bt2xNYmVLSzfYprQz5s8big6S-41PYjTruvg`,
         },
       });
       const data = await res.json();
@@ -192,7 +192,7 @@ export default function Editor({ documentId, title }: Props) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTU2Njk4NCwiZXhwIjoxNzc1NjUzMzg0fQ.VnoSUt0VvJago6hVYOSWd5KYX6WbD3zSp7Wgfm0rhtE`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTczOTIzNywiZXhwIjoxNzc1ODI1NjM3fQ.4e9WKv_bt2xNYmVLSzfYprQz5s8big6S-41PYjTruvg`,
         },
         body: JSON.stringify({ title }),
       });
