@@ -83,7 +83,7 @@ export async function createWSServer(prisma: PrismaService) {
           }
           rooms.get(documentId)!.add(ws);
 
-          // 🔥 ADD THIS (workspace room)
+          // add this (workspace room)
           if (!workspaceRooms.has(workspaceId)) {
             workspaceRooms.set(workspaceId, new Set());
           }

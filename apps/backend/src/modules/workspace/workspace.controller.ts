@@ -19,7 +19,7 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { PaginationDto } from './dto/pagination.dto';
 
 @Controller('workspace')
-@UseGuards(JwtAuthGuard) // 👈 protect all routes
+@UseGuards(JwtAuthGuard) // protect all routes
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
 

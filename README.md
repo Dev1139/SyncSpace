@@ -2,13 +2,13 @@
 
 Real-time collaborative document editor (Google Docs-like)
 
-## 🚀 Tech Stack
+## Tech Stack
 
 - Backend: NestJS, Prisma, PostgreSQL
 - Realtime: WebSockets + Yjs
 - Frontend: (coming soon)
 
-## 📌 Features (WIP)
+## Features (WIP)
 
 - [x] User registration
 - [x] Workspace creation
@@ -18,18 +18,18 @@ Real-time collaborative document editor (Google Docs-like)
 - [ ] Presence system
 - [ ] Version history
 
-## 📂 Project Structure
+## Project Structure
 
 (To be added)
 
-## ⚙️ Setup Instructions
+## Setup Instructions
 
 (To be added)
 
-## 🧠 Architecture
+## Architecture
 
 (To be added)
 
-## 📦 API
+## API
 
 (To be added)

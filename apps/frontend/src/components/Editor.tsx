@@ -206,7 +206,7 @@ export default function Editor({ documentId, title }: Props) {
 
     console.log("Creating editor for:", documentId);
 
-    // 🔥 fresh Y.Doc
+    // fresh Y.Doc
     const ydoc = new Y.Doc();
     ydocRef.current = ydoc;
 
@@ -238,13 +238,13 @@ export default function Editor({ documentId, title }: Props) {
     (editor as any).registerPlugin(createCursorPlugin(awareness));
     awarenessRef.current = awareness;
 
-    // 👤 user identity
+    // user identity
     awareness.setLocalStateField("user", {
       name: "User " + Math.floor(Math.random() * 100),
       color: "#" + Math.floor(Math.random() * 16777215).toString(16),
     });
 
-    // 🧠 cursor tracking
+    // cursor tracking
     const updateCursor = () => {
       const { from, to } = editor.state.selection;
 
@@ -257,7 +257,7 @@ export default function Editor({ documentId, title }: Props) {
     editor.on("selectionUpdate", updateCursor);
     updateCursor();
 
-    // 📤 SEND DOC UPDATES
+    // SEND DOC UPDATES
     const updateHandler = (update: Uint8Array, origin: any) => {
       if (origin === "remote") return;
 
@@ -272,7 +272,7 @@ export default function Editor({ documentId, title }: Props) {
 
     ydoc.on("update", updateHandler);
 
-    // 📤 SEND AWARENESS
+    // SEND AWARENESS
     const awarenessHandler = ({ added, updated, removed }: any) => {
       const changed = added.concat(updated).concat(removed);
       const states = Array.from(awareness.getStates().values());
@@ -297,7 +297,7 @@ export default function Editor({ documentId, title }: Props) {
 
     awareness.on("update", awarenessHandler);
 
-    // 🧹 CLEANUP
+    // CLEANUP
     return () => {
       editor.off("selectionUpdate", updateCursor);
       ydoc.off("update", updateHandler);
