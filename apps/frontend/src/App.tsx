@@ -63,7 +63,7 @@ function App() {
       `http://localhost:3000/document/workspaces/87c3452e-5217-4223-9f0c-24a7800add04/documents?search=${searchValue}`,
       {
         headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTczOTIzNywiZXhwIjoxNzc1ODI1NjM3fQ.4e9WKv_bt2xNYmVLSzfYprQz5s8big6S-41PYjTruvg`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
         },
       },
     );
@@ -116,7 +116,7 @@ function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTczOTIzNywiZXhwIjoxNzc1ODI1NjM3fQ.4e9WKv_bt2xNYmVLSzfYprQz5s8big6S-41PYjTruvg`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
         },
         body: JSON.stringify({ title: "Untitled Document" }),
       },
@@ -154,7 +154,7 @@ function App() {
     await fetch(`http://localhost:3000/document/${id}`, {
       method: "DELETE",
       headers: {
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTczOTIzNywiZXhwIjoxNzc1ODI1NjM3fQ.4e9WKv_bt2xNYmVLSzfYprQz5s8big6S-41PYjTruvg`,
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
       },
     });
 
@@ -190,7 +190,7 @@ function App() {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTczOTIzNywiZXhwIjoxNzc1ODI1NjM3fQ.4e9WKv_bt2xNYmVLSzfYprQz5s8big6S-41PYjTruvg`,
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
       },
       body: JSON.stringify({ title }),
     });

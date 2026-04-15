@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
 import { Decoration, DecorationSet } from "prosemirror-view";
@@ -17,6 +17,7 @@ type Props = {
   title: string;
 };
 // const documentId = "dccdf1f9-04f2-45d9-86c6-8097b06a231d";
+const WORKSPACE_ID = "87c3452e-5217-4223-9f0c-24a7800add04";
 
 function createCursorPlugin(awareness: Awareness) {
   return new Plugin({
@@ -153,7 +154,7 @@ export default function Editor({ documentId, title }: Props) {
       type: "join-document",
       data: {
         documentId,
-        workspaceId: "87c3452e-5217-4223-9f0c-24a7800add04",
+        workspaceId: WORKSPACE_ID,
       },
     });
   }, [ws, documentId]);
@@ -164,7 +165,7 @@ export default function Editor({ documentId, title }: Props) {
     const fetchTitle = async () => {
       const res = await fetch(`http://localhost:3000/document/${documentId}`, {
         headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTczOTIzNywiZXhwIjoxNzc1ODI1NjM3fQ.4e9WKv_bt2xNYmVLSzfYprQz5s8big6S-41PYjTruvg`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
         },
       });
       const data = await res.json();
@@ -179,7 +180,7 @@ export default function Editor({ documentId, title }: Props) {
   useEffect(() => {
     if (!documentId) return;
 
-    if (!title || title.trim() === "") return;
+    if (!localTitle || localTitle.trim() === "") return;
 
     // skip first load (VERY IMPORTANT)
     if (isFirstLoad.current) {
@@ -192,9 +193,9 @@ export default function Editor({ documentId, title }: Props) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NTczOTIzNywiZXhwIjoxNzc1ODI1NjM3fQ.4e9WKv_bt2xNYmVLSzfYprQz5s8big6S-41PYjTruvg`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
         },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title: localTitle }),
       });
     }, 800);
 
@@ -321,11 +322,12 @@ export default function Editor({ documentId, title }: Props) {
               data: {
                 documentId,
                 title: newTitle,
+                workspaceId: WORKSPACE_ID,
               },
             });
           }}
           onBlur={() => {
-            if (!title.trim()) {
+            if (!localTitle.trim()) {
               setLocalTitle("Untitled Document");
             }
           }}
