@@ -1,213 +1,33 @@
-import { useEffect, useRef, useState } from "react";
 import Editor from "./components/Editor";
 import Sidebar from "./components/Sidebar";
 import { useWS } from "./context/WebContextProvider";
-
-type Doc = {
-  id: string;
-  title: string;
-};
+import { useDocuments } from "./hooks/useDocuments";
 
 function App() {
   const wsContext = useWS();
-  const hasFetched = useRef(false);
   const ws = wsContext?.ws;
   const addListener = wsContext?.addListener;
-  const removeListener = wsContext?.removeListener;
   const send = wsContext?.send;
-  const [search, setSearch] = useState("");
-
-  const [documents, setDocuments] = useState<Doc[]>([]);
-  const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!ws) return;
-
-    const handler = (msg: any) => {
-      if (msg.type === "title-change") {
-        const { documentId, title } = msg.data;
-
-        setDocuments((prev) =>
-          prev.map((doc) => (doc.id === documentId ? { ...doc, title } : doc)),
-        );
-      }
-
-      if (msg.type === "document-created") {
-        const doc = msg.data;
-
-        setDocuments((prev) => {
-          if (prev.find((d) => d.id === doc.id)) return prev;
-          return [doc, ...prev];
-        });
-      }
-
-      if (msg.type === "document-deleted") {
-        const { documentId } = msg.data;
-
-        setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
-
-        if (selectedDoc === documentId) {
-          setSelectedDoc(null);
-        }
-      }
-    };
-
-    addListener(handler);
-
-    return () => removeListener(handler);
-  }, [ws, addListener, removeListener]);
-
-  // Fetch documents
-  const fetchDocuments = async (searchValue = "") => {
-    const res = await fetch(
-      `http://localhost:3000/document/workspaces/87c3452e-5217-4223-9f0c-24a7800add04/documents?search=${searchValue}`,
-      {
-        headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
-        },
-      },
-    );
-
-    const data = await res.json();
-    const items = data?.data.items || [];
-
-    //  KEY FIX
-    if (searchValue) {
-      // replace completely for search
-      setDocuments(items);
-    } else {
-      // merge only for normal fetch
-      setDocuments((prev) => {
-        const map = new Map(prev.map((doc) => [doc.id, doc]));
-
-        items.forEach((doc: any) => {
-          map.set(doc.id, doc);
-        });
-
-        return Array.from(map.values());
-      });
-    }
-
-    if (items.length > 0 && !selectedDoc) {
-      setSelectedDoc(items[0].id);
-    }
-  };
-  useEffect(() => {
-    const delay = setTimeout(() => {
-      fetchDocuments(search);
-    }, 300);
-
-    return () => clearTimeout(delay);
-  }, [search]);
-
-  useEffect(() => {
-    if (hasFetched.current) return;
-
-    hasFetched.current = true;
-    fetchDocuments();
-  }, []);
-
-  const currentDoc = documents.find((doc) => doc.id === selectedDoc);
-
-  const handleCreateDocument = async () => {
-    const res = await fetch(
-      "http://localhost:3000/document/workspaces/87c3452e-5217-4223-9f0c-24a7800add04/documents",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
-        },
-        body: JSON.stringify({ title: "Untitled Document" }),
-      },
-    );
-
-    const response = await res.json();
-    console.log("CREATE RESPONSE:", response);
-
-    // handle both formats safely
-    const newDoc = response.data || response;
-
-    if (!newDoc?.id) return;
-
-    const doc = {
-      id: newDoc.id,
-      title: newDoc.title,
-    };
-
-    //  INSTANT UI UPDATE
-    setDocuments((prev) => [doc, ...prev]);
-
-    //  SELECT NEW DOC
-    setSelectedDoc(doc.id);
-
-    send?.({
-      type: "document-created",
-      data: {
-        workspaceId: "87c3452e-5217-4223-9f0c-24a7800add04",
-        document: doc,
-      },
-    });
-  };
-
-  const handleDeleteDocument = async (id: string) => {
-    await fetch(`http://localhost:3000/document/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
-      },
-    });
-
-    setDocuments((prev) => {
-      const updated = prev.filter((doc) => doc.id !== id);
-
-      if (selectedDoc === id) {
-        setSelectedDoc(updated.length > 0 ? updated[0].id : null);
-      }
-
-      return updated;
-    });
-
-    send?.({
-      type: "document-deleted",
-      data: {
-        workspaceId: "87c3452e-5217-4223-9f0c-24a7800add04",
-        documentId: id,
-      },
-    });
-  };
-
-  const handleRenameDocument = async (id: string, title: string) => {
-    if (!title.trim()) return;
-
-    //  Optimistic update
-    setDocuments((prev) =>
-      prev.map((doc) => (doc.id === id ? { ...doc, title } : doc)),
-    );
-
-    //  API call
-    await fetch(`http://localhost:3000/document/${id}/title`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MDhjMTI5Ny03ZjRjLTRlZDgtYTczMy00OGEwZmFlODQwNzkiLCJlbWFpbCI6InRlc3R1c2VyMUB0ZXN0LmNvbSIsImlhdCI6MTc3NjI1NjEyNCwiZXhwIjoxNzc2ODYwOTI0fQ.iG0olil0z9iHAaZCYVgUE7zcjtapSHIEmLtV9K79dq0`,
-      },
-      body: JSON.stringify({ title }),
-    });
-
-    send?.({
-      type: "title-change",
-      data: {
-        documentId: id,
-        title,
-        workspaceId: "87c3452e-5217-4223-9f0c-24a7800add04",
-      },
-    });
-  };
+  const removeListener = wsContext?.removeListener;
+  const {
+    search,
+    setSearch,
+    documents,
+    selectedDoc,
+    setSelectedDoc,
+    currentDoc,
+    handleCreateDocument,
+    handleDeleteDocument,
+    handleRenameDocument,
+  } = useDocuments({
+    send,
+    ws: ws ?? null,
+    addListener,
+    removeListener,
+  });
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-slate-100 text-slate-800">
       <Sidebar
         documents={documents}
         selectedDoc={selectedDoc}
@@ -219,12 +39,20 @@ function App() {
         search={search}
       />
 
-      {/* Editor */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         {selectedDoc ? (
           <Editor documentId={selectedDoc} title={currentDoc?.title || ""} />
         ) : (
-          <div className="p-6">Select a document</div>
+          <div className="h-full grid place-items-center p-6">
+            <div className="rounded-2xl border border-slate-200 bg-white px-8 py-10 text-center shadow-sm">
+              <p className="text-lg font-semibold text-slate-700">
+                Select a document
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                Choose one from the sidebar or create a new one.
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </div>

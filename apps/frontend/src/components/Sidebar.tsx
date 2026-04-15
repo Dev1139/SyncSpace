@@ -40,86 +40,94 @@ export default function Sidebar({
   };
 
   return (
-    <div className="w-64 border-r bg-white p-4">
-      <h2 className="font-semibold mb-4">Documents</h2>
+    <aside className="w-72 border-r border-slate-200 bg-white/95 p-4 backdrop-blur">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        Documents
+      </h2>
       <input
         placeholder="Search documents..."
         value={search}
         onChange={(e) => onSearch(e.target.value)}
-        className="mb-3 w-full px-2 py-1 text-sm rounded bg-gray-100 outline-none focus:bg-white"
+        className="mb-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
       />
       {search && (
         <button
           onClick={() => onSearch("")}
-          className="text-xs text-blue-500 mb-2"
+          className="mb-2 text-xs font-medium text-blue-600 hover:text-blue-700"
         >
           Clear
         </button>
       )}
       <button
         onClick={onCreate}
-        className="mb-4 w-full bg-blue-500 text-white px-3 py-2 rounded"
+        className="mb-4 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
       >
-        + New Document
+        Add Document
       </button>
 
       {documents.length === 0 ? (
-        <div className="text-sm text-gray-500 mt-2">
+        <div className="mt-2 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
           {search ? "No documents found" : "No documents available"}
         </div>
       ) : (
-        documents.map((doc) => (
-          <div
-            key={doc.id}
-            className={`p-2 rounded flex justify-between items-center ${
-              selectedDoc === doc.id ? "bg-blue-100" : "hover:bg-gray-100"
-            }`}
-          >
-            {editingId === doc.id ? (
-              <div className="bg-blue-50 rounded px-1">
-                <input
-                  value={tempTitle}
-                  autoFocus
-                  onChange={(e) => setTempTitle(e.target.value)}
-                  onBlur={() => handleRename(doc.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleRename(doc.id);
-                    }
-                    if (e.key === "Escape") {
-                      setEditingId(null);
-                    }
-                  }}
-                  className="bg-transparent outline-none w-full text-sm transition-all duration-150"
-                />
-              </div>
-            ) : (
-              <span
-                onDoubleClick={() => {
-                  setEditingId(doc.id);
-                  setTempTitle(doc.title);
-                }}
-                onClick={() => onSelect(doc.id)}
-                className="cursor-pointer flex-1"
-              >
-                {doc.title}
-              </span>
-            )}
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingId(null);
-                onDelete(doc.id);
-              }}
-              className="text-red-500 text-sm ml-2"
+        <div className="space-y-1.5">
+          {documents.map((doc) => (
+            <div
+              key={doc.id}
+              className={`group flex items-center justify-between rounded-lg border px-2.5 py-2 transition ${
+                selectedDoc === doc.id
+                  ? "border-blue-200 bg-blue-50 shadow-sm"
+                  : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+              }`}
             >
-              ❌
-            </button>
-          </div>
-        ))
+              {editingId === doc.id ? (
+                <div className="w-full rounded-md bg-white px-1.5">
+                  <input
+                    value={tempTitle}
+                    autoFocus
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    onBlur={() => handleRename(doc.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleRename(doc.id);
+                      }
+                      if (e.key === "Escape") {
+                        setEditingId(null);
+                      }
+                    }}
+                    className="w-full bg-transparent py-0.5 text-sm text-slate-700 outline-none"
+                  />
+                </div>
+              ) : (
+                <span
+                  onDoubleClick={() => {
+                    setEditingId(doc.id);
+                    setTempTitle(doc.title);
+                  }}
+                  onClick={() => onSelect(doc.id)}
+                  className="flex-1 cursor-pointer truncate text-sm font-medium text-slate-700"
+                  title={doc.title}
+                >
+                  {doc.title}
+                </span>
+              )}
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingId(null);
+                  onDelete(doc.id);
+                }}
+                className="ml-2 rounded-md px-2 py-1 text-xs font-medium text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                aria-label={`Delete ${doc.title}`}
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
       )}
-    </div>
+    </aside>
   );
 }

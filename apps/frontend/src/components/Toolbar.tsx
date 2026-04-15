@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Bold, Italic, Heading1, List } from "lucide-react";
 
 export default function Toolbar({ editor }: any) {
@@ -23,15 +23,15 @@ export default function Toolbar({ editor }: any) {
   if (!editor) return null;
 
   const buttonClass = (isActive: boolean) =>
-    `px-3 py-1.5 rounded-md text-sm font-medium transition
+    `inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition
    ${
      isActive
-       ? "bg-blue-500 text-white shadow-sm"
-       : "bg-white border hover:bg-gray-100"
+      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800"
    }`;
 
   return (
-    <div className="flex gap-2 mb-4 p-2 bg-gray-100 rounded-md">
+    <div className="mb-2 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
       {/* Bold */}
       <button
         className={buttonClass(editor.isActive("bold"))}
