@@ -67,6 +67,35 @@ export async function createWSServer(prisma: PrismaService) {
   //  CONNECTION
   wss.on('connection', (ws) => {
     console.log('Client connected');
+    const url = request.url || '';
+
+    const params = new URLSearchParams(url.split('?')[1]);
+    const token = params.get('token');
+
+    if (!token) {
+      ws.close();
+      return;
+    }
+
+    try {
+      const payload = jwt.verify(token, 'supersecret') as any;
+
+      // attach user to connection
+      (ws as any).userId = payload.sub;
+
+      console.log('User connected:', payload.sub);
+    } catch (err) {
+      console.log('Invalid token');
+      ws.close();
+      return;
+    }
+
+    const userId = (ws as any).userId;
+
+    if (!userId) {
+      ws.close();
+      return;
+    }
 
     ws.on('message', async (message) => {
       try {
@@ -76,6 +105,48 @@ export async function createWSServer(prisma: PrismaService) {
         // JOIN DOCUMENT
         if (type === 'join-document') {
           const { documentId, workspaceId } = data;
+
+          const userId = (ws as any).userId;
+
+          const document = await prisma.document.findFirst({
+            where: {
+              id: documentId,
+              workspace: {
+                members: {
+                  some: {
+                    userId,
+                  },
+                },
+              },
+            },
+          });
+
+          const membership = await prisma.workspaceMember.findFirst({
+            where: {
+              userId,
+              workspace: {
+                documents: {
+                  some: { id: documentId },
+                },
+              },
+            },
+          });
+
+          if (!document) {
+            console.log('Access Denied');
+            ws.close();
+            return;
+          }
+
+          if (!membership) {
+            ws.close();
+            return;
+          }
+
+          // attach context
+          (ws as any).userId = userId;
+          (ws as any).role = membership.role;
+          (ws as any).documentId = documentId;
 
           // document room (existing)
           if (!rooms.has(documentId)) {
@@ -157,6 +228,21 @@ export async function createWSServer(prisma: PrismaService) {
         if (type === 'doc-update') {
           console.log('UPDATE RECEIVED:', data);
           const { documentId, update } = data;
+
+          const role = (ws as any).role;
+          const currentDoc = (ws as any).documentId;
+
+          // ENSURE SAME DOCUMENT
+          if (currentDoc !== documentId) {
+            ws.close();
+            return;
+          }
+
+          // ROLE CHECK
+          if (role === 'viewer') {
+            console.log('Viewer tried to edit');
+            return;
+          }
 
           const ydoc = getYDoc(documentId);
 

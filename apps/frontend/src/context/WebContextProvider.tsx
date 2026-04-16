@@ -31,7 +31,8 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
     let socket: WebSocket;
 
     const connect = () => {
-      socket = new WebSocket(WS_URL);
+      const token = localStorage.getItem('token');
+      socket = new WebSocket(`${WS_URL}?token=${token}`);
 
       socket.onopen = () => {
         console.log("WS connected");
