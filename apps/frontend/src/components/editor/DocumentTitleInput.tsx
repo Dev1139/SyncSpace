@@ -1,4 +1,5 @@
-import { DEFAULT_DOCUMENT_TITLE, WORKSPACE_ID } from "../../constants/appConfig";
+import { DEFAULT_DOCUMENT_TITLE } from "../../constants/appConfig";
+import { useWorkspace } from "../../context/WorkspaceContext";
 
 type DocumentTitleInputProps = {
   documentId: string;
@@ -13,19 +14,25 @@ export default function DocumentTitleInput({
   setLocalTitle,
   send,
 }: DocumentTitleInputProps) {
+  const { currentWorkspaceId } = useWorkspace();
+
   return (
     <input
       value={localTitle === DEFAULT_DOCUMENT_TITLE ? "" : localTitle}
       onChange={(e) => {
         const newTitle = e.target.value;
+
         setLocalTitle(newTitle);
+
+        // Prevent sending if workspace not ready
+        if (!currentWorkspaceId) return;
 
         send?.({
           type: "title-change",
           data: {
             documentId,
             title: newTitle,
-            workspaceId: WORKSPACE_ID,
+            workspaceId: currentWorkspaceId,
           },
         });
       }}

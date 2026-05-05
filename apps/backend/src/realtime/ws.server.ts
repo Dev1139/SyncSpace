@@ -1,9 +1,11 @@
 import * as WebSocket from 'ws';
 import * as Y from 'yjs';
 import { PrismaService } from '../prisma/prisma.service';
+import jwt from 'jsonwebtoken';
 
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function createWSServer(prisma: PrismaService) {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   const wss = new WebSocket.Server({ port: 3001 });
 
   console.log('WebSocket server running on ws://localhost:3001');
@@ -65,7 +67,7 @@ export async function createWSServer(prisma: PrismaService) {
   };
 
   //  CONNECTION
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, request) => {
     console.log('Client connected');
     const url = request.url || '';
 

@@ -5,9 +5,9 @@ import * as Y from "yjs";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
 import { Editor as TiptapEditor } from "@tiptap/core";
-import { WORKSPACE_ID } from "../constants/appConfig";
 import { createCursorPlugin } from "../components/editor/createCursorPlugin";
 import type { WSContextType } from "../context/WebContextProvider";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 type PresenceUser = {
   name: string;
@@ -27,6 +27,7 @@ export const useCollaborativeEditor = (
   const [editor, setEditor] = useState<any>(null);
   const ydocRef = useRef<Y.Doc>(new Y.Doc());
   const awarenessRef = useRef<Awareness | null>(null);
+  const { currentWorkspaceId } = useWorkspace();
 
   useEffect(() => {
     if (!ws || !addListener || !removeListener) return;
@@ -54,7 +55,7 @@ export const useCollaborativeEditor = (
       type: "join-document",
       data: {
         documentId,
-        workspaceId: WORKSPACE_ID,
+        workspaceId: currentWorkspaceId,
       },
     });
   }, [ws, documentId, send]);
@@ -62,12 +63,13 @@ export const useCollaborativeEditor = (
   useEffect(() => {
     if (!documentId) return;
 
-    const ydoc = new Y.Doc();
-    ydocRef.current = ydoc;
+    const ydoc = ydocRef.current;
 
     const newEditor = new TiptapEditor({
       extensions: [
-        StarterKit,
+        StarterKit.configure({
+        history: false, 
+      }),
         Collaboration.configure({
           document: ydoc,
           field: "content",

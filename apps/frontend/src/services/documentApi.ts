@@ -1,54 +1,77 @@
 import {
   API_BASE_URL,
-  AUTH_TOKEN,
   DEFAULT_DOCUMENT_TITLE,
-  WORKSPACE_ID,
 } from "../constants/appConfig";
 import type { Doc } from "../types/document";
 
-const authHeaders = {
-  Authorization: AUTH_TOKEN,
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+
+  return {
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
 };
 
-const jsonHeaders = {
-  ...authHeaders,
+const getJsonHeaders = () => ({
+  ...getAuthHeaders(),
   "Content-Type": "application/json",
-};
+});
+
 
 const readJson = async (res: Response) => {
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`);
+  }
+
   const payload = await res.json();
   return payload?.data ?? payload;
 };
 
+
 export const fetchWorkspaceDocuments = async (
-  searchValue = "",
+  workspaceId: string,
+  searchValue = ""
 ): Promise<Doc[]> => {
   const res = await fetch(
-    `${API_BASE_URL}/document/workspaces/${WORKSPACE_ID}/documents?search=${searchValue}`,
-    { headers: authHeaders },
+    `${API_BASE_URL}/document/workspaces/${workspaceId}/documents?search=${searchValue}`,
+    {
+      headers: getAuthHeaders(),
+    }
   );
+
   const data = await readJson(res);
   return data?.items ?? [];
 };
 
-export const getDocumentById = async (documentId: string): Promise<Doc | null> => {
+
+export const getDocumentById = async (
+  documentId: string
+): Promise<Doc | null> => {
   const res = await fetch(`${API_BASE_URL}/document/${documentId}`, {
-    headers: authHeaders,
+    headers: getAuthHeaders(),
   });
+
   return (await readJson(res)) ?? null;
 };
 
-export const createWorkspaceDocument = async (): Promise<Doc | null> => {
+
+export const createWorkspaceDocument = async (
+  workspaceId: string
+): Promise<Doc | null> => {
   const res = await fetch(
-    `${API_BASE_URL}/document/workspaces/${WORKSPACE_ID}/documents`,
+    `${API_BASE_URL}/document/workspaces/${workspaceId}/documents`,
     {
       method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({ title: DEFAULT_DOCUMENT_TITLE }),
-    },
+      headers: getJsonHeaders(),
+      body: JSON.stringify({
+        title: DEFAULT_DOCUMENT_TITLE,
+      }),
+    }
   );
 
   const data = await readJson(res);
+
   if (!data?.id) return null;
 
   return {
@@ -57,20 +80,35 @@ export const createWorkspaceDocument = async (): Promise<Doc | null> => {
   };
 };
 
-export const deleteDocumentById = async (documentId: string): Promise<void> => {
-  await fetch(`${API_BASE_URL}/document/${documentId}`, {
+
+export const deleteDocumentById = async (
+  documentId: string
+): Promise<void> => {
+  const res = await fetch(`${API_BASE_URL}/document/${documentId}`, {
     method: "DELETE",
-    headers: authHeaders,
+    headers: getAuthHeaders(),
   });
+
+  if (!res.ok) {
+    throw new Error("Failed to delete document");
+  }
 };
+
 
 export const updateDocumentTitleById = async (
   documentId: string,
-  title: string,
+  title: string
 ): Promise<void> => {
-  await fetch(`${API_BASE_URL}/document/${documentId}/title`, {
-    method: "PATCH",
-    headers: jsonHeaders,
-    body: JSON.stringify({ title }),
-  });
+  const res = await fetch(
+    `${API_BASE_URL}/document/${documentId}/title`,
+    {
+      method: "PATCH",
+      headers: getJsonHeaders(),
+      body: JSON.stringify({ title }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to update title");
+  }
 };
