@@ -41,7 +41,7 @@ export default function DocumentTitleInput({
           setLocalTitle(DEFAULT_DOCUMENT_TITLE);
         }
       }}
-      className="w-full max-w-2xl rounded-lg border border-transparent bg-transparent px-2 py-1 text-2xl font-semibold tracking-tight text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-200 focus:bg-white"
+      className="w-full max-w-2xl rounded border border-transparent bg-transparent px-2 py-1 text-xl font-semibold text-text outline-none transition placeholder:text-subtle focus:border-primary/50 focus:bg-void focus:ring-2 focus:ring-primary/15 sm:text-2xl"
       placeholder={DEFAULT_DOCUMENT_TITLE}
     />
   );

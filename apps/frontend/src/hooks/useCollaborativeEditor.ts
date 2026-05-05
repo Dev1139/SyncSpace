@@ -25,7 +25,8 @@ export const useCollaborativeEditor = (
 
   const [users, setUsers] = useState<PresenceUser[]>([]);
   const [editor, setEditor] = useState<any>(null);
-  const ydocRef = useRef<Y.Doc>(new Y.Doc());
+  const ydocRef = useRef<Y.Doc | null>(null);
+  const activeDocumentIdRef = useRef<string | null>(null);
   const awarenessRef = useRef<Awareness | null>(null);
   const { currentWorkspaceId } = useWorkspace();
 
@@ -33,7 +34,13 @@ export const useCollaborativeEditor = (
     if (!ws || !addListener || !removeListener) return;
 
     const handler = (msg: any) => {
+      if (msg.documentId && msg.documentId !== activeDocumentIdRef.current) {
+        return;
+      }
+
       if (msg.type === "sync" || msg.type === "doc-update") {
+        if (!ydocRef.current) return;
+
         const update = new Uint8Array(msg.update);
         Y.applyUpdate(ydocRef.current, update, "remote");
       }
@@ -49,7 +56,8 @@ export const useCollaborativeEditor = (
   }, [ws, addListener, removeListener]);
 
   useEffect(() => {
-    if (!ws || !documentId || !send) return;
+    if (!ws || !documentId || !send || !currentWorkspaceId || !editor) return;
+    if (activeDocumentIdRef.current !== documentId) return;
 
     send({
       type: "join-document",
@@ -58,18 +66,22 @@ export const useCollaborativeEditor = (
         workspaceId: currentWorkspaceId,
       },
     });
-  }, [ws, documentId, send]);
+  }, [ws, documentId, send, currentWorkspaceId, editor]);
 
   useEffect(() => {
     if (!documentId) return;
 
-    const ydoc = ydocRef.current;
+    const ydoc = new Y.Doc();
+    ydocRef.current = ydoc;
+    activeDocumentIdRef.current = documentId;
+    awarenessRef.current = null;
+    setUsers([]);
 
     const newEditor = new TiptapEditor({
       extensions: [
         StarterKit.configure({
-        history: false, 
-      }),
+          undoRedo: false,
+        }),
         Collaboration.configure({
           document: ydoc,
           field: "content",
@@ -81,13 +93,19 @@ export const useCollaborativeEditor = (
 
     return () => {
       newEditor.destroy();
+
+      if (activeDocumentIdRef.current === documentId) {
+        ydocRef.current = null;
+      }
     };
   }, [documentId]);
 
   useEffect(() => {
     if (!editor || !documentId) return;
+    const ydoc = ydocRef.current;
+    if (!ydoc) return;
 
-    const awareness = new Awareness(ydocRef.current);
+    const awareness = new Awareness(ydoc);
     awarenessRef.current = awareness;
     (editor as any).registerPlugin(createCursorPlugin(awareness));
 
@@ -118,7 +136,7 @@ export const useCollaborativeEditor = (
       });
     };
 
-    ydocRef.current.on("update", updateHandler);
+    ydoc.on("update", updateHandler);
 
     const awarenessHandler = ({ added, updated, removed }: any) => {
       const changed = added.concat(updated).concat(removed);
@@ -140,8 +158,10 @@ export const useCollaborativeEditor = (
 
     return () => {
       editor.off("selectionUpdate", updateCursor);
-      ydocRef.current.off("update", updateHandler);
+      ydoc.off("update", updateHandler);
       awareness.off("update", awarenessHandler);
+      awareness.destroy();
+      ydoc.destroy();
     };
   }, [editor, documentId, send]);
 

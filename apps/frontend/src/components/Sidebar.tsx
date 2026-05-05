@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FileText, Plus, Search, Trash2, X } from "lucide-react";
 
 type Doc = {
   id: string;
@@ -14,6 +15,8 @@ type Props = {
   onRename: (id: string, title: string) => void;
   onSearch: (value: string) => void;
   search: string;
+  workspaceName: string;
+  onClose?: () => void;
 };
 
 export default function Sidebar({
@@ -25,6 +28,8 @@ export default function Sidebar({
   onRename,
   onSearch,
   search,
+  workspaceName,
+  onClose,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempTitle, setTempTitle] = useState("");
@@ -40,74 +45,104 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="w-72 border-r border-slate-200 bg-white/95 p-4 backdrop-blur">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-        Documents
-      </h2>
-      <input
-        placeholder="Search documents..."
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        className="mb-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
-      />
-      {search && (
+    <aside className="flex h-full min-h-0 flex-col p-4">
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-primary/20 text-primary ring-1 ring-primary/30">
+            <FileText size={19} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold leading-tight text-text">
+              {workspaceName}
+            </h1>
+            <p className="text-sm text-muted">
+              {documents.length} {documents.length === 1 ? "document" : "documents"}
+            </p>
+          </div>
+        </div>
         <button
-          onClick={() => onSearch("")}
-          className="mb-2 text-xs font-medium text-blue-600 hover:text-blue-700"
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border2 text-muted transition hover:bg-surface3 hover:text-text md:hidden"
+          aria-label="Close document list"
         >
-          Clear
+          <X size={16} />
         </button>
-      )}
+      </div>
+
+      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.05em] text-subtle">
+        Documents
+      </p>
+
+      <label className="relative mb-3 block">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <input
+          placeholder="Search documents..."
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          className="slate-input w-full pl-9 pr-9"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => onSearch("")}
+            className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted transition hover:bg-surface3 hover:text-text"
+            aria-label="Clear search"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </label>
+
       <button
         onClick={onCreate}
-        className="mb-4 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+        className="slate-button-primary mb-4 flex w-full items-center justify-center gap-2"
       >
-        Add Document
+        <Plus size={16} />
+        New Document
       </button>
 
-      {documents.length === 0 ? (
-        <div className="mt-2 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
-          {search ? "No documents found" : "No documents available"}
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {documents.map((doc) => (
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+        {documents.length === 0 ? (
+          <div className="rounded border border-dashed border-border bg-void/40 p-4 text-sm text-muted">
+            {search ? "No documents found" : "Create your first document to begin."}
+          </div>
+        ) : (
+          documents.map((doc) => (
             <div
               key={doc.id}
-              className={`group flex items-center justify-between rounded-lg border px-2.5 py-2 transition ${
-                selectedDoc === doc.id
-                  ? "border-blue-200 bg-blue-50 shadow-sm"
-                  : "border-transparent hover:border-slate-200 hover:bg-slate-50"
-              }`}
+              className={`
+                flex items-center justify-between
+                px-3 py-2 rounded border
+                cursor-pointer
+                transition
+                ${
+                  selectedDoc === doc.id
+                    ? "border-primary/40 bg-primarySoft text-text"
+                    : "border-transparent hover:border-border hover:bg-surface2 text-muted"
+                }
+              `}
             >
               {editingId === doc.id ? (
-                <div className="w-full rounded-md bg-white px-1.5">
-                  <input
-                    value={tempTitle}
-                    autoFocus
-                    onChange={(e) => setTempTitle(e.target.value)}
-                    onBlur={() => handleRename(doc.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleRename(doc.id);
-                      }
-                      if (e.key === "Escape") {
-                        setEditingId(null);
-                      }
-                    }}
-                    className="w-full bg-transparent py-0.5 text-sm text-slate-700 outline-none"
-                  />
-                </div>
+                <input
+                  value={tempTitle}
+                  autoFocus
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  onBlur={() => handleRename(doc.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRename(doc.id);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="min-w-0 w-full bg-transparent text-sm outline-none text-text"
+                />
               ) : (
                 <span
+                  onClick={() => onSelect(doc.id)}
                   onDoubleClick={() => {
                     setEditingId(doc.id);
                     setTempTitle(doc.title);
                   }}
-                  onClick={() => onSelect(doc.id)}
-                  className="flex-1 cursor-pointer truncate text-sm font-medium text-slate-700"
-                  title={doc.title}
+                  className="min-w-0 flex-1 truncate text-sm"
                 >
                   {doc.title}
                 </span>
@@ -116,18 +151,16 @@ export default function Sidebar({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setEditingId(null);
                   onDelete(doc.id);
                 }}
-                className="ml-2 rounded-md px-2 py-1 text-xs font-medium text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                aria-label={`Delete ${doc.title}`}
+                className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded text-muted hover:bg-danger/10 hover:text-danger"
               >
-                Delete
+                <Trash2 size={14} />
               </button>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </aside>
   );
 }

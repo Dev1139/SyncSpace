@@ -2,6 +2,7 @@ import { useState } from "react";
 import { login, register } from "../services/authApi";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { FileText, LogIn, UserPlus } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -66,36 +67,54 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-slate-100">
-      <div className="bg-white p-6 rounded-xl shadow-md w-80 space-y-4">
-        <h2 className="text-xl font-semibold text-center">Auth</h2>
+    <div className="flex h-screen items-center justify-center bg-background px-4 text-text">
+      <div className="w-full max-w-md">
+        <div className="mb-7 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded bg-primary/20 text-primary ring-1 ring-primary/30">
+            <FileText size={24} />
+          </div>
+          <h1 className="text-3xl font-semibold">Log in to SyncSpace</h1>
+          <p className="mt-2 text-sm text-muted">
+            Enter your email to access your collaborative workspace.
+          </p>
+        </div>
 
-        <input
-          className="w-full border rounded px-3 py-2"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter email"
-        />
+        <div className="slate-panel rounded-lg p-6">
+          <label className="mb-2 block text-sm font-semibold text-text">Email</label>
 
-        {error && (
-          <p className="text-red-500 text-sm text-center">{error}</p>
-        )}
+          <input
+            className="slate-input w-full"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter email"
+          />
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50"
-        >
-          {loading ? "Loading..." : "Login"}
-        </button>
+          {error && (
+            <p className="mt-3 rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+              {error}
+            </p>
+          )}
 
-        <button
-          onClick={handleRegister}
-          disabled={loading}
-          className="w-full bg-gray-200 py-2 rounded hover:bg-gray-300 disabled:opacity-50"
-        >
-          Register
-        </button>
+          <div className="mt-5 space-y-3">
+            <button
+              onClick={handleLogin}
+              disabled={loading}
+              className="slate-button-primary flex w-full items-center justify-center gap-2"
+            >
+              <LogIn size={16} />
+              {loading ? "Loading..." : "Login"}
+            </button>
+
+            <button
+              onClick={handleRegister}
+              disabled={loading}
+              className="slate-button-secondary flex w-full items-center justify-center gap-2"
+            >
+              <UserPlus size={16} />
+              Register
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

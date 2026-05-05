@@ -1,6 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --color-background: 5 20 36;
+  --color-void: 1 15 31;
+  --color-surface: 13 28 45;
+  --color-surface-2: 18 33 49;
+  --color-surface-3: 28 43 60;
+  --color-elevated: 39 54 71;
+  --color-text: 212 228 250;
+  --color-muted: 198 198 205;
+  --color-subtle: 121 128 152;
+  --color-border: 39 54 71;
+  --color-border-2: 69 70 77;
+  --color-primary: 139 92 246;
+  --color-primary-soft: 49 32 82;
+  --color-amber: 222 194 154;
+  --color-danger: 255 180 171;
+  --color-hover: 28 43 60;
+  --shadow-panel: 0 0 0 1px rgba(39,54,71,0.72), 0 12px 32px rgba(2,6,23,0.38);
+  --shadow-float: 0 0 0 1px rgba(69,70,77,0.86), 0 12px 24px rgba(2,6,23,0.5);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-background: 244 247 251;
+  --color-void: 255 255 255;
+  --color-surface: 232 238 247;
+  --color-surface-2: 255 255 255;
+  --color-surface-3: 241 245 249;
+  --color-elevated: 226 232 240;
+  --color-text: 15 23 42;
+  --color-muted: 71 85 105;
+  --color-subtle: 100 116 139;
+  --color-border: 203 213 225;
+  --color-border-2: 148 163 184;
+  --color-primary: 124 58 237;
+  --color-primary-soft: 237 233 254;
+  --color-amber: 146 97 22;
+  --color-danger: 185 28 28;
+  --color-hover: 226 232 240;
+  --shadow-panel: 0 0 0 1px rgba(203,213,225,0.82), 0 12px 32px rgba(15,23,42,0.08);
+  --shadow-float: 0 0 0 1px rgba(148,163,184,0.75), 0 12px 24px rgba(15,23,42,0.12);
+}
 
 html,
 body,
@@ -9,41 +55,103 @@ body,
 }
 
 body {
+  @apply bg-background text-text antialiased;
   margin: 0;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    Helvetica,
-    Arial,
-    "Apple Color Emoji",
-    "Segoe UI Emoji";
-  background: #f1f5f9;
-  color: #0f172a;
+  font-family: 'Inter', sans-serif;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-border-2)) rgb(var(--color-background));
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.32);
+}
+
+@layer components {
+  .slate-panel {
+    @apply border border-border bg-gradient-to-b from-surface3 to-surface shadow-panel;
+  }
+
+  .slate-input {
+    @apply rounded border border-border2 bg-void px-3 py-2 text-sm text-text outline-none transition placeholder:text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20;
+  }
+
+  .slate-button-primary {
+    @apply rounded border border-primary/70 bg-primary px-3 py-2 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] transition hover:bg-primary/90 disabled:opacity-50;
+  }
+
+  .slate-button-secondary {
+    @apply rounded border border-border2 bg-transparent px-3 py-2 text-sm font-semibold text-text transition hover:bg-surface3 disabled:opacity-50;
+  }
 }
 
 .ProseMirror {
-  min-height: 360px;
-  line-height: 1.75;
+  min-height: 520px;
   outline: none;
-  color: #1e293b;
+  color: rgb(var(--color-text));
+  font-size: 18px;
+  line-height: 1.6;
 }
 
 .ProseMirror h1 {
-  margin: 1rem 0 0.625rem;
-  font-size: 1.55rem;
-  line-height: 1.2;
+  color: rgb(var(--color-text));
+  font-size: 32px;
   font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 24px;
+  letter-spacing: 0;
 }
 
-.ProseMirror ul {
-  margin: 0.75rem 0;
-  padding-left: 1.2rem;
+.ProseMirror h2,
+.ProseMirror h3 {
+  color: rgb(var(--color-text));
+  margin-top: 28px;
+  letter-spacing: 0;
+}
+
+.ProseMirror p,
+.ProseMirror ul,
+.ProseMirror ol {
+  color: rgb(var(--color-muted));
 }
 
 .ProseMirror p {
-  margin: 0.6em 0;
+  margin: 0.7em 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  margin: 0.75rem 0;
+  padding-left: 1.25rem;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror li {
+  padding-left: 0.25rem;
+}
+
+.ProseMirror li::marker {
+  color: rgb(var(--color-text));
+}
+
+.ProseMirror code,
+.ProseMirror pre {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.ProseMirror pre {
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 4px;
+  background: rgb(var(--color-void));
+  color: rgb(var(--color-text));
+  padding: 16px;
 }

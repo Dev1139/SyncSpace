@@ -168,6 +168,7 @@ export async function createWSServer(prisma: PrismaService) {
           ws.send(
             JSON.stringify({
               type: 'sync',
+              documentId,
               update: Array.from(state),
             }),
           );
@@ -185,6 +186,7 @@ export async function createWSServer(prisma: PrismaService) {
                 client.send(
                   JSON.stringify({
                     type: 'awareness-update',
+                    documentId,
                     update,
                   }),
                 );
@@ -261,6 +263,7 @@ export async function createWSServer(prisma: PrismaService) {
                 client.send(
                   JSON.stringify({
                     type: 'doc-update',
+                    documentId,
                     update,
                   }),
                 );

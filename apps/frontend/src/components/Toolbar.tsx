@@ -23,43 +23,43 @@ export default function Toolbar({ editor }: any) {
   if (!editor) return null;
 
   const buttonClass = (isActive: boolean) =>
-    `inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition
+    `inline-flex h-8 w-8 items-center justify-center rounded border text-sm font-medium transition
    ${
      isActive
-      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+      ? "border-primary bg-primary text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]"
+      : "border-border2 bg-surface text-muted hover:bg-surface3 hover:text-text"
    }`;
 
   return (
-    <div className="mb-2 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-      {/* Bold */}
+    <div className="mb-2 flex flex-wrap gap-2 rounded border border-border bg-void p-2">
       <button
         className={buttonClass(editor.isActive("bold"))}
         onClick={() => editor.chain().focus().toggleBold().run()}
+        title="Bold"
       >
         <Bold size={16} />
       </button>
 
-      {/* Italic */}
       <button
         className={buttonClass(editor.isActive("italic"))}
         onClick={() => editor.chain().focus().toggleItalic().run()}
+        title="Italic"
       >
         <Italic size={16} />
       </button>
 
-      {/* Heading */}
       <button
         className={buttonClass(editor.isActive("heading", { level: 1 }))}
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        title="Heading"
       >
         <Heading1 size={16} />
       </button>
 
-      {/* Bullet List */}
       <button
         className={buttonClass(editor.isActive("bulletList"))}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
+        title="Bullet list"
       >
         <List size={16} />
       </button>

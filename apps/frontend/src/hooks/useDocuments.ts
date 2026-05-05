@@ -25,9 +25,22 @@ export const useDocuments = ({
 
   const [search, setSearch] = useState("");
   const [documents, setDocuments] = useState<Doc[]>([]);
+  const [documentCache, setDocumentCache] = useState<Doc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
 
   const { currentWorkspaceId } = useWorkspace();
+
+  const mergeDocumentCache = useCallback((items: Doc[]) => {
+    setDocumentCache((prev) => {
+      const map = new Map(prev.map((doc) => [doc.id, doc]));
+
+      items.forEach((doc) => {
+        map.set(doc.id, doc);
+      });
+
+      return Array.from(map.values());
+    });
+  }, []);
 
   // WS LISTENER
   useEffect(() => {
@@ -42,6 +55,11 @@ export const useDocuments = ({
             doc.id === documentId ? { ...doc, title } : doc
           )
         );
+        setDocumentCache((prev) =>
+          prev.map((doc) =>
+            doc.id === documentId ? { ...doc, title } : doc
+          )
+        );
       }
 
       if (msg.type === "document-created") {
@@ -51,12 +69,16 @@ export const useDocuments = ({
           if (prev.find((d) => d.id === doc.id)) return prev;
           return [doc, ...prev];
         });
+        mergeDocumentCache([doc]);
       }
 
       if (msg.type === "document-deleted") {
         const { documentId } = msg.data;
 
         setDocuments((prev) =>
+          prev.filter((doc) => doc.id !== documentId)
+        );
+        setDocumentCache((prev) =>
           prev.filter((doc) => doc.id !== documentId)
         );
 
@@ -68,7 +90,7 @@ export const useDocuments = ({
 
     addListener(handler);
     return () => removeListener(handler);
-  }, [ws, addListener, removeListener]);
+  }, [ws, addListener, removeListener, mergeDocumentCache]);
 
   // FETCH DOCUMENTS
   const fetchDocuments = useCallback(
@@ -79,6 +101,8 @@ export const useDocuments = ({
         currentWorkspaceId,
         searchValue
       );
+
+      mergeDocumentCache(items);
 
       if (searchValue) {
         setDocuments(items);
@@ -99,7 +123,7 @@ export const useDocuments = ({
         return items.length > 0 ? items[0].id : null;
       });
     },
-    [currentWorkspaceId]
+    [currentWorkspaceId, mergeDocumentCache]
   );
 
   // SEARCH DEBOUNCE
@@ -140,6 +164,7 @@ export const useDocuments = ({
     if (!doc) return;
 
     setDocuments((prev) => [doc, ...prev]);
+    mergeDocumentCache([doc]);
     setSelectedDoc(doc.id);
 
     send?.({
@@ -149,7 +174,7 @@ export const useDocuments = ({
         document: doc,
       },
     });
-  }, [send, currentWorkspaceId]);
+  }, [send, currentWorkspaceId, mergeDocumentCache]);
 
   // DELETE
   const handleDeleteDocument = useCallback(
@@ -168,6 +193,7 @@ export const useDocuments = ({
 
         return updated;
       });
+      setDocumentCache((prev) => prev.filter((doc) => doc.id !== id));
 
       send?.({
         type: "document-deleted",
@@ -191,6 +217,11 @@ export const useDocuments = ({
           doc.id === id ? { ...doc, title } : doc
         )
       );
+      setDocumentCache((prev) =>
+        prev.map((doc) =>
+          doc.id === id ? { ...doc, title } : doc
+        )
+      );
 
       await updateDocumentTitleById(id, title);
 
@@ -206,9 +237,9 @@ export const useDocuments = ({
     [send, currentWorkspaceId]
   );
 
-  const currentDoc = documents.find(
-    (doc) => doc.id === selectedDoc
-  );
+  const currentDoc =
+    documents.find((doc) => doc.id === selectedDoc) ||
+    documentCache.find((doc) => doc.id === selectedDoc);
 
   return {
     search,

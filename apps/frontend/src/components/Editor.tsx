@@ -17,13 +17,19 @@ export default function Editor({ documentId, title }: Props) {
   const { editor, users } = useCollaborativeEditor(documentId, wsContext);
   const { localTitle, setLocalTitle } = useDocumentTitleSync(documentId, title);
 
-  if (!editor) return <div>Loading editor...</div>;
+  if (!editor) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted">
+        Loading editor...
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full overflow-y-auto p-6 md:p-8">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm md:px-5">
-          <div className="flex items-center justify-between gap-4">
+    <div className="h-full overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 md:px-10 md:py-8">
+      <div className="mx-auto w-full max-w-content">
+        <div className="mb-4 rounded-lg border border-border bg-surface2 px-4 py-3 shadow-panel">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <DocumentTitleInput
               documentId={documentId}
               localTitle={localTitle}
@@ -34,10 +40,10 @@ export default function Editor({ documentId, title }: Props) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+        <div className="rounded-lg border border-border bg-gradient-to-b from-surface2 to-void p-3 shadow-panel sm:p-4 md:p-5">
           <Toolbar editor={editor} />
 
-          <div className="mt-4 max-w-none rounded-xl border border-slate-100 bg-slate-50/40 p-4 md:p-6">
+          <div className="mt-4 max-w-none rounded border border-border bg-void/80 p-4 sm:p-5 md:p-8">
             <EditorContent editor={editor} />
           </div>
         </div>

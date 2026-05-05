@@ -4,20 +4,17 @@ import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 
 import App from "./App.tsx";
-import { WebSocketProvider } from "./context/WebContextProvider";
 import { AuthProvider } from "./context/AuthContext";
-import { WorkspaceProvider } from "./context/WorkspaceContext.tsx";
+import { ThemeProvider } from "./context/ThemeContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <WorkspaceProvider>
-          <WebSocketProvider>
-            <App />
-          </WebSocketProvider>
-        </WorkspaceProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,
 );

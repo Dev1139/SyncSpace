@@ -29,9 +29,14 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
 
   useEffect(() => {
     let socket: WebSocket;
+    let reconnectTimer: number | undefined;
+    let shouldReconnect = true;
 
     const connect = () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
+
+      if (!token || !shouldReconnect) return;
+
       socket = new WebSocket(`${WS_URL}?token=${token}`);
 
       socket.onopen = () => {
@@ -45,14 +50,22 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
       };
 
       socket.onclose = () => {
+        setWs(null);
+
+        if (!shouldReconnect) return;
+
         console.log("WS disconnected... reconnecting");
-        setTimeout(connect, 2000);
+        reconnectTimer = window.setTimeout(connect, 2000);
       };
     };
 
     connect();
 
-    return () => socket?.close();
+    return () => {
+      shouldReconnect = false;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      socket?.close();
+    };
   }, []);
 
   const addListener = (cb: (msg: any) => void) => {
