@@ -93,12 +93,8 @@ export class AuthService {
     });
 
     return {
-      success: true,
-      message: 'Login successful',
-      data: {
-        user: sanitizeUser(user),
-        access_token: token,
-      },
+      user: sanitizeUser(user),
+      access_token: token,
     };
   }
 }
