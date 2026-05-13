@@ -1,6 +1,6 @@
 import { IsEmail, IsEnum } from 'class-validator';
 
-export enum Role {
+export enum WorkspaceRole {
   editor = 'editor',
   viewer = 'viewer',
 }
@@ -9,6 +9,6 @@ export class InviteUserDto {
   @IsEmail()
   email: string;
 
-  @IsEnum(Role)
-  role: Role;
+  @IsEnum(WorkspaceRole)
+  role: WorkspaceRole;
 }
