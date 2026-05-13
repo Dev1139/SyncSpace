@@ -14,6 +14,8 @@ import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 
 import { sanitizeUser } from '../utils/sanitize-user';
+import { UpdatePasswordDto } from '../dto/update-password.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -95,6 +97,74 @@ export class AuthService {
     return {
       user: sanitizeUser(user),
       access_token: token,
+    };
+  }
+
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      user: sanitizeUser(user),
+    };
+  }
+
+  async updatePassword(userId: string, body: UpdatePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isOldPasswordValid = await bcrypt.compare(
+      body.oldPassword,
+      user.password,
+    );
+
+    if (!isOldPasswordValid) {
+      throw new UnauthorizedException('Old password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(body.newPassword, 10);
+
+    await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return {
+      message: 'Password updated successfully',
+    };
+  }
+
+  async updateProfile(userId: string, body: UpdateProfileDto) {
+    const updatedUser = await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        ...(body.name && { name: body.name }),
+        ...(body.avatarUrl && { avatarUrl: body.avatarUrl }),
+      },
+    });
+
+    return {
+      user: sanitizeUser(updatedUser),
     };
   }
 }
