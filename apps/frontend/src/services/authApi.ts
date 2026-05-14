@@ -1,21 +1,30 @@
-import { API_BASE_URL } from "../constants/appConfig";
+import { apiClient } from "./client";
 
-export async function register(email: string) {
-  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+type LoginPayload = {
+  email: string;
+  password: string;
+};
+
+type RegisterPayload = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+export async function login(data: LoginPayload) {
+  return apiClient("/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(data),
   });
-
-  return res.json();
 }
 
-export async function login(email: string) {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+export async function register(data: RegisterPayload) {
+  return apiClient("/auth/register", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(data),
   });
+}
 
-  return res.json();
+export async function getMe() {
+  return apiClient("/auth/me");
 }

@@ -1,5 +1,5 @@
-import { apiFetch } from "./client";
+import { apiClient } from "./client";
 
 export async function getWorkspaces() {
-  return apiFetch("/workspace");
+  return apiClient("/workspace");
 }
