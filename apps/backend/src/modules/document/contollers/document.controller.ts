@@ -11,17 +11,25 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { DocumentService } from './document.service';
-import { WorkspaceMemberGuard } from 'src/common/guards/workspace-member.guard';
+
+import { DocumentService } from '../services/document.service';
+
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { PaginationDto } from '../workspace/dto/pagination.dto';
+import { WorkspaceMemberGuard } from 'src/common/guards/workspace-member.guard';
 import { DocumentAccessGuard } from 'src/common/guards/document-access.guard';
 
-@Controller('document')
-export class DocumentController {
-  constructor(private documentService: DocumentService) {}
+import { PaginationDto } from '../../workspace/dto/pagination.dto';
 
-  @Get('/workspaces/:workspaceId/documents')
+import { CreateDocumentDto } from '../dto/create-document.dto';
+import { UpdateDocumentDto } from '../dto/update-document.dto';
+import { UpdateDocumentTitleDto } from '../dto/update-document-title.dto';
+
+@Controller()
+export class DocumentController {
+  constructor(private readonly documentService: DocumentService) {}
+
+  // Get all documents of workspace
+  @Get('workspace/:workspaceId/documents')
   @UseGuards(JwtAuthGuard, WorkspaceMemberGuard)
   getDocuments(
     @Param('workspaceId') workspaceId: string,
@@ -37,51 +45,59 @@ export class DocumentController {
     );
   }
 
-  @Get(':documentId')
+  // Get single document
+  @Get('documents/:documentId')
   @UseGuards(JwtAuthGuard, DocumentAccessGuard)
   getOne(@Param('documentId') documentId: string) {
     return this.documentService.getDocument(documentId);
   }
 
-  @Post('/workspaces/:workspaceId/documents')
+  // Create document
+  @Post('workspace/:workspaceId/documents')
   @UseGuards(JwtAuthGuard, WorkspaceMemberGuard)
   create(
     @Param('workspaceId') workspaceId: string,
-    @Body('title') title: string,
+    @Body() body: CreateDocumentDto,
   ) {
-    return this.documentService.createDocument(title, workspaceId);
+    return this.documentService.createDocument(body.title, workspaceId);
   }
 
-  @Patch(':documentId')
+  // Update document content
+  @Patch('documents/:documentId')
   @UseGuards(JwtAuthGuard, DocumentAccessGuard)
   update(
     @Param('documentId') documentId: string,
-    @Body('content') content: string,
-    @Body('plainText') plainText: string,
+    @Body() body: UpdateDocumentDto,
     @Req() req: any,
   ) {
     if (req.workspaceRole === 'viewer') {
       throw new ForbiddenException('No edit permission');
     }
 
-    return this.documentService.updateDocument(documentId, content, plainText);
+    return this.documentService.updateDocument(
+      documentId,
+      body.content,
+      body.plainText,
+    );
   }
 
-  @Patch(':documentId/title')
+  // Update document title
+  @Patch('documents/:documentId/title')
   @UseGuards(JwtAuthGuard, DocumentAccessGuard)
   updateTitle(
     @Param('documentId') documentId: string,
-    @Body('title') title: string,
+    @Body() body: UpdateDocumentTitleDto,
     @Req() req: any,
   ) {
     if (req.workspaceRole === 'viewer') {
       throw new ForbiddenException('No edit permission');
     }
 
-    return this.documentService.updateTitle(documentId, title);
+    return this.documentService.updateTitle(documentId, body.title);
   }
 
-  @Delete(':documentId')
+  // Delete document
+  @Delete('documents/:documentId')
   @UseGuards(JwtAuthGuard, DocumentAccessGuard)
   delete(@Param('documentId') documentId: string, @Req() req: any) {
     if (req.workspaceRole === 'viewer') {

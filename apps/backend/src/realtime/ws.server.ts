@@ -1,22 +1,40 @@
 import * as WebSocket from 'ws';
 import * as Y from 'yjs';
-import { PrismaService } from '../prisma/prisma.service';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
-// eslint-disable-next-line @typescript-eslint/require-await
+import { PrismaService } from '../prisma/prisma.service';
+
+type AuthenticatedSocket = WebSocket & {
+  userId?: string;
+  role?: string;
+  documentId?: string;
+  workspaceId?: string;
+};
+
 export async function createWSServer(prisma: PrismaService) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  const wss = new WebSocket.Server({ port: 3001 });
+  const wss = new WebSocket.Server({
+    port: 3001,
+  });
 
   console.log('WebSocket server running on ws://localhost:3001');
 
+  // Active collaborative documents
   const docs = new Map<string, Y.Doc>();
-  const rooms = new Map<string, Set<WebSocket>>();
+
+  // Document rooms
+  const rooms = new Map<string, Set<AuthenticatedSocket>>();
+
+  // Workspace rooms
+  const workspaceRooms = new Map<string, Set<AuthenticatedSocket>>();
+
+  // Debounced save timers
   const saveTimers = new Map<string, NodeJS.Timeout>();
 
-  const workspaceRooms = new Map<string, Set<WebSocket>>();
+  // =========================
+  // HELPERS
+  // =========================
 
-  const broadcastToWorkspace = (workspaceId: string, message: any) => {
+  const broadcastToWorkspace = (workspaceId: string, message: unknown) => {
     const clients = workspaceRooms.get(workspaceId);
 
     if (!clients) return;
@@ -28,50 +46,61 @@ export async function createWSServer(prisma: PrismaService) {
     });
   };
 
-  // get or create doc
   const getYDoc = (documentId: string): Y.Doc => {
     if (!docs.has(documentId)) {
       docs.set(documentId, new Y.Doc());
     }
+
     return docs.get(documentId)!;
   };
 
-  //  extract plain text
   const extractPlainText = (ydoc: Y.Doc): string => {
     const fragment = ydoc.getXmlFragment('content');
 
-    // convert XML → string
     return fragment.toString();
   };
 
-  // load from DB
   const loadDocument = async (documentId: string): Promise<Y.Doc> => {
-    if (docs.has(documentId)) return docs.get(documentId)!;
+    if (docs.has(documentId)) {
+      return docs.get(documentId)!;
+    }
 
     const doc = new Y.Doc();
 
     const dbDoc = await prisma.document.findUnique({
-      where: { id: documentId },
+      where: {
+        id: documentId,
+      },
     });
 
     if (dbDoc?.content) {
       try {
         Y.applyUpdate(doc, dbDoc.content);
-      } catch (e) {
-        console.error('Failed to load Yjs state:', e);
+      } catch (error) {
+        console.error('Failed to load Yjs state:', error);
       }
     }
 
     docs.set(documentId, doc);
+
     return doc;
   };
 
-  //  CONNECTION
-  wss.on('connection', (ws, request) => {
+  // =========================
+  // CONNECTION
+  // =========================
+
+  wss.on('connection', (ws: AuthenticatedSocket, request) => {
     console.log('Client connected');
+
+    // =========================
+    // JWT AUTH
+    // =========================
+
     const url = request.url || '';
 
     const params = new URLSearchParams(url.split('?')[1]);
+
     const token = params.get('token');
 
     if (!token) {
@@ -80,89 +109,100 @@ export async function createWSServer(prisma: PrismaService) {
     }
 
     try {
-      const payload = jwt.verify(token, 'supersecret') as any;
+      const payload = jwt.verify(token, process.env.JWT_SECRET!) as {
+        sub: string;
+      };
 
-      // attach user to connection
-      (ws as any).userId = payload.sub;
+      ws.userId = payload.sub;
 
       console.log('User connected:', payload.sub);
-    } catch (err) {
+    } catch {
       console.log('Invalid token');
       ws.close();
       return;
     }
 
-    const userId = (ws as any).userId;
-
-    if (!userId) {
+    if (!ws.userId) {
       ws.close();
       return;
     }
 
+    // =========================
+    // MESSAGE HANDLER
+    // =========================
+
     ws.on('message', async (message) => {
       try {
-        const parsed = JSON.parse(message.toString());
+        const parsed = JSON.parse(message.toString()) as {
+          type: string;
+          data: any;
+        };
+
         const { type, data } = parsed;
 
+        // =========================
         // JOIN DOCUMENT
+        // =========================
+
         if (type === 'join-document') {
           const { documentId, workspaceId } = data;
-
-          const userId = (ws as any).userId;
 
           const document = await prisma.document.findFirst({
             where: {
               id: documentId,
+
               workspace: {
                 members: {
                   some: {
-                    userId,
+                    userId: ws.userId,
                   },
                 },
               },
             },
           });
 
-          const membership = await prisma.workspaceMember.findFirst({
-            where: {
-              userId,
-              workspace: {
-                documents: {
-                  some: { id: documentId },
-                },
-              },
-            },
-          });
-
           if (!document) {
-            console.log('Access Denied');
+            console.log('Access denied');
+
             ws.close();
             return;
           }
+
+          const membership = await prisma.workspaceMember.findFirst({
+            where: {
+              userId: ws.userId,
+
+              workspaceId,
+            },
+          });
 
           if (!membership) {
             ws.close();
             return;
           }
 
-          // attach context
-          (ws as any).userId = userId;
-          (ws as any).role = membership.role;
-          (ws as any).documentId = documentId;
+          // Attach socket context
+          ws.role = membership.role;
+          ws.documentId = documentId;
+          ws.workspaceId = workspaceId;
 
-          // document room (existing)
+          // Document room
           if (!rooms.has(documentId)) {
             rooms.set(documentId, new Set());
           }
+
           rooms.get(documentId)!.add(ws);
 
-          // add this (workspace room)
+          // Workspace room
           if (!workspaceRooms.has(workspaceId)) {
             workspaceRooms.set(workspaceId, new Set());
           }
+
           workspaceRooms.get(workspaceId)!.add(ws);
 
+          // Load Yjs doc
           const ydoc = await loadDocument(documentId);
+
           const state = Y.encodeStateAsUpdate(ydoc);
 
           ws.send(
@@ -172,35 +212,41 @@ export async function createWSServer(prisma: PrismaService) {
               update: Array.from(state),
             }),
           );
+
+          console.log(`Joined document: ${documentId}`);
         }
 
+        // =========================
         // AWARENESS UPDATE
+        // =========================
+
         if (type === 'awareness-update') {
           const { documentId, update } = data;
 
           const clients = rooms.get(documentId);
 
-          if (clients) {
-            clients.forEach((client) => {
-              if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(
-                  JSON.stringify({
-                    type: 'awareness-update',
-                    documentId,
-                    update,
-                  }),
-                );
-              }
-            });
-          }
+          if (!clients) return;
+
+          clients.forEach((client) => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              client.send(
+                JSON.stringify({
+                  type: 'awareness-update',
+                  documentId,
+                  update,
+                }),
+              );
+            }
+          });
         }
-        //  TITLE CHANGE (FIXED)
+
+        // =========================
+        // TITLE CHANGE
+        // =========================
+
         if (type === 'title-change') {
           const { documentId, title, workspaceId } = data;
 
-          console.log('TITLE UPDATE RECEIVED:', title);
-
-          //  broadcast to WORKSPACE (not document room)
           broadcastToWorkspace(workspaceId, {
             type: 'title-change',
             data: {
@@ -209,6 +255,10 @@ export async function createWSServer(prisma: PrismaService) {
             },
           });
         }
+
+        // =========================
+        // DOCUMENT CREATED
+        // =========================
 
         if (type === 'document-created') {
           const { workspaceId, document } = data;
@@ -219,32 +269,38 @@ export async function createWSServer(prisma: PrismaService) {
           });
         }
 
+        // =========================
+        // DOCUMENT DELETED
+        // =========================
+
         if (type === 'document-deleted') {
           const { workspaceId, documentId } = data;
 
           broadcastToWorkspace(workspaceId, {
             type: 'document-deleted',
-            data: { documentId },
+            data: {
+              documentId,
+            },
           });
         }
 
-        //  DOCUMENT UPDATE
+        // =========================
+        // DOCUMENT UPDATE
+        // =========================
+
         if (type === 'doc-update') {
-          console.log('UPDATE RECEIVED:', data);
           const { documentId, update } = data;
 
-          const role = (ws as any).role;
-          const currentDoc = (ws as any).documentId;
-
-          // ENSURE SAME DOCUMENT
-          if (currentDoc !== documentId) {
+          // Ensure same document
+          if (ws.documentId !== documentId) {
             ws.close();
             return;
           }
 
-          // ROLE CHECK
-          if (role === 'viewer') {
+          // Prevent viewers editing
+          if (ws.role === 'viewer') {
             console.log('Viewer tried to edit');
+
             return;
           }
 
@@ -252,11 +308,12 @@ export async function createWSServer(prisma: PrismaService) {
 
           const uint8 = new Uint8Array(update);
 
-          // apply update
+          // Apply update
           Y.applyUpdate(ydoc, uint8);
 
-          // broadcast to others
+          // Broadcast to others
           const clients = rooms.get(documentId);
+
           if (clients) {
             clients.forEach((client) => {
               if (client !== ws && client.readyState === WebSocket.OPEN) {
@@ -271,21 +328,29 @@ export async function createWSServer(prisma: PrismaService) {
             });
           }
 
+          // =========================
           // DEBOUNCED SAVE
+          // =========================
+
           if (saveTimers.has(documentId)) {
-            clearTimeout(saveTimers.get(documentId)!);
+            clearTimeout(saveTimers.get(documentId));
           }
 
           const timer = setTimeout(async () => {
             const state = Y.encodeStateAsUpdate(ydoc);
+
             const buffer = new Uint8Array(state);
 
             const plainText = extractPlainText(ydoc);
 
             await prisma.document.update({
-              where: { id: documentId },
+              where: {
+                id: documentId,
+              },
+
               data: {
                 content: buffer,
+
                 plainText,
               },
             });
@@ -295,16 +360,43 @@ export async function createWSServer(prisma: PrismaService) {
 
           saveTimers.set(documentId, timer);
         }
-      } catch (err) {
-        console.error('WS Error:', err);
+      } catch (error) {
+        console.error('WS Error:', error);
       }
     });
+
+    // =========================
+    // DISCONNECT
+    // =========================
 
     ws.on('close', () => {
       console.log('Client disconnected');
 
-      rooms.forEach((clients) => {
+      // Remove from document rooms
+      rooms.forEach((clients, documentId) => {
         clients.delete(ws);
+
+        // Cleanup empty room
+        if (clients.size === 0) {
+          rooms.delete(documentId);
+
+          docs.delete(documentId);
+
+          if (saveTimers.has(documentId)) {
+            clearTimeout(saveTimers.get(documentId));
+
+            saveTimers.delete(documentId);
+          }
+        }
+      });
+
+      // Remove from workspace rooms
+      workspaceRooms.forEach((clients, workspaceId) => {
+        clients.delete(ws);
+
+        if (clients.size === 0) {
+          workspaceRooms.delete(workspaceId);
+        }
       });
     });
   });
