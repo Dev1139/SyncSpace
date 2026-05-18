@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+
 import { DEFAULT_DOCUMENT_TITLE } from "../constants/appConfig";
-import {
-  getDocumentById,
-  updateDocumentTitleById,
-} from "../services/documentApi";
+
+import { getDocument, updateDocumentTitle } from "../services/documentApi";
 
 export const useDocumentTitleSync = (documentId: string, title: string) => {
   const [localTitle, setLocalTitle] = useState(DEFAULT_DOCUMENT_TITLE);
+
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
@@ -17,9 +17,15 @@ export const useDocumentTitleSync = (documentId: string, title: string) => {
     if (!documentId) return;
 
     const fetchTitle = async () => {
-      const doc = await getDocumentById(documentId);
-      setLocalTitle(doc?.title || DEFAULT_DOCUMENT_TITLE);
-      isFirstLoad.current = true;
+      try {
+        const doc = await getDocument(documentId);
+
+        setLocalTitle(doc?.data?.title || DEFAULT_DOCUMENT_TITLE);
+
+        isFirstLoad.current = true;
+      } catch (error) {
+        console.error("Failed to fetch document title", error);
+      }
     };
 
     fetchTitle();
@@ -27,6 +33,7 @@ export const useDocumentTitleSync = (documentId: string, title: string) => {
 
   useEffect(() => {
     if (!documentId) return;
+
     if (!localTitle || localTitle.trim() === "") return;
 
     if (isFirstLoad.current) {
@@ -35,7 +42,13 @@ export const useDocumentTitleSync = (documentId: string, title: string) => {
     }
 
     const timeout = setTimeout(async () => {
-      await updateDocumentTitleById(documentId, localTitle);
+      try {
+        await updateDocumentTitle(documentId, {
+          title: localTitle,
+        });
+      } catch (error) {
+        console.error("Failed to update title", error);
+      }
     }, 800);
 
     return () => clearTimeout(timeout);

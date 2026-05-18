@@ -10,7 +10,6 @@ import { WebSocketProvider } from "./context/WebContextProvider";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import WorkspacePage from "./pages/WorkspacePage";
-import DocumentPage from "./pages/DocumentPage";
 
 function App() {
   const { token } = useAuth();
@@ -41,20 +40,21 @@ function App() {
         element={
           <ProtectedRoute>
             <WorkspaceProvider>
-              <WorkspacePage />
+              <WebSocketProvider>
+                <WorkspacePage />
+              </WebSocketProvider>
             </WorkspaceProvider>
           </ProtectedRoute>
         }
       />
 
-      {/* Document Editor */}
       <Route
-        path="/documents/:documentId"
+        path="/workspace/:workspaceId/document/:documentId"
         element={
           <ProtectedRoute>
             <WorkspaceProvider>
               <WebSocketProvider>
-                <DocumentPage />
+                <WorkspacePage />
               </WebSocketProvider>
             </WorkspaceProvider>
           </ProtectedRoute>
