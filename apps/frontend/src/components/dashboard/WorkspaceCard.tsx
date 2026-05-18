@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
-import { FileText, Users, ArrowRight, Trash2 } from "lucide-react";
+import { FileText, Users, ArrowRight, Trash2, Clock3 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
@@ -50,10 +50,10 @@ export default function WorkspaceCard({
   };
 
   return (
-    <div className="group rounded-3xl border border-border bg-surface p-5 transition hover:border-primary/30 hover:shadow-xl">
+    <div className="group flex h-full flex-col rounded-3xl border border-border bg-surface p-5 transition duration-200 hover:-translate-y-1 hover:border-primary/30 hover:shadow-2xl">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="line-clamp-1 text-xl font-semibold text-text">
             {workspace.name}
           </h2>
@@ -67,20 +67,20 @@ export default function WorkspaceCard({
           {/* Delete */}
           <button
             onClick={handleDelete}
-            className="rounded-xl p-2 text-muted transition hover:bg-danger/10 hover:text-danger"
+            className="rounded-xl p-2 text-subtle opacity-0 transition hover:bg-danger/10 hover:text-danger group-hover:opacity-100"
           >
             <Trash2 size={18} />
           </button>
 
-          {/* Icon */}
-          <div className="rounded-xl bg-primary/10 p-3 text-primary">
+          {/* Workspace Icon */}
+          <div className="rounded-2xl bg-primary/10 p-3 text-primary">
             <FileText size={20} />
           </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="mt-6 flex items-center gap-5">
+      <div className="mt-6 flex items-center gap-6">
         <div className="flex items-center gap-2 text-sm text-muted">
           <FileText size={16} />
 
@@ -95,10 +95,14 @@ export default function WorkspaceCard({
       </div>
 
       {/* Footer */}
-      <div className="mt-6 flex items-center justify-between">
-        <p className="text-xs text-muted">
-          Updated {new Date(workspace.updatedAt).toLocaleDateString()}
-        </p>
+      <div className="mt-auto flex items-center justify-between pt-6">
+        <div className="flex items-center gap-2 text-xs text-muted">
+          <Clock3 size={14} />
+
+          <span>
+            Updated {new Date(workspace.updatedAt).toLocaleDateString()}
+          </span>
+        </div>
 
         <button
           onClick={() => navigate(`/workspace/${workspace.id}`)}

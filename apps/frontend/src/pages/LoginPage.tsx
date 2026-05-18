@@ -13,6 +13,8 @@ import {
 
 import { useNavigate } from "react-router-dom";
 
+import toast from "react-hot-toast";
+
 import { login, register } from "../services/authApi";
 
 import { useAuth } from "../context/AuthContext";
@@ -67,6 +69,7 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
+
       setError("");
 
       if (isRegister) {
@@ -85,6 +88,8 @@ export default function LoginPage() {
         }
 
         setAuth(token, user);
+
+        toast.success("Account created successfully");
       } else {
         const res: any = await login({
           email,
@@ -100,6 +105,8 @@ export default function LoginPage() {
         }
 
         setAuth(token, user);
+
+        toast.success("Logged in successfully");
       }
 
       navigate("/dashboard");
@@ -111,9 +118,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-background via-surface to-background text-text">
+    <div className="flex min-h-screen overflow-y-auto bg-gradient-to-br from-background via-surface to-background text-text">
       {/* Left Section */}
-      <div className="hidden flex-1 flex-col justify-between border-r border-border/50 p-10 lg:flex">
+      <div className="hidden w-[58%] flex-col border-r border-border/50 p-8 lg:flex xl:p-10">
         <div>
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20">
@@ -129,7 +136,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-16 max-w-md">
+          <div className="mt-14 max-w-md">
             <h2 className="text-4xl font-bold leading-tight">
               Collaborate on ideas, documents, and projects in realtime.
             </h2>
@@ -141,11 +148,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Features */}
-        <div className="space-y-4">
-          <div className="slate-panel flex items-start gap-4 rounded-2xl p-4">
-            <div className="rounded-xl bg-primary/10 p-2 text-primary">
-              <Sparkles size={18} />
+        <div className="mt-14 max-w-[680px] space-y-4">
+          <div className="slate-panel flex items-start gap-4 rounded-2xl p-5">
+            <div className="rounded-xl bg-primary/10 p-3 text-primary">
+              <Sparkles size={20} />
             </div>
 
             <div>
@@ -157,9 +163,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="slate-panel flex items-start gap-4 rounded-2xl p-4">
-            <div className="rounded-xl bg-primary/10 p-2 text-primary">
-              <Users size={18} />
+          <div className="slate-panel flex items-start gap-4 rounded-2xl p-5">
+            <div className="rounded-xl bg-primary/10 p-3 text-primary">
+              <Users size={20} />
             </div>
 
             <div>
@@ -171,9 +177,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="slate-panel flex items-start gap-4 rounded-2xl p-4">
-            <div className="rounded-xl bg-primary/10 p-2 text-primary">
-              <Layers size={18} />
+          <div className="slate-panel flex items-start gap-4 rounded-2xl p-5">
+            <div className="rounded-xl bg-primary/10 p-3 text-primary">
+              <Layers size={20} />
             </div>
 
             <div>
@@ -188,7 +194,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right Section */}
-      <div className="flex w-full items-center justify-center px-6 py-10 lg:w-[520px]">
+      <div className="flex w-full items-center justify-center px-4 py-8 sm:px-6 lg:w-[520px] lg:px-10">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="mb-8 flex items-center gap-3 lg:hidden">
@@ -204,7 +210,7 @@ export default function LoginPage() {
           </div>
 
           {/* Card */}
-          <div className="slate-panel rounded-3xl p-7 shadow-2xl">
+          <div className="slate-panel w-full rounded-3xl p-5 shadow-2xl sm:p-7">
             <div className="mb-6">
               <h2 className="text-3xl font-bold">
                 {isRegister ? "Create account" : "Welcome back"}
@@ -251,7 +257,14 @@ export default function LoginPage() {
             </div>
 
             {/* Form */}
-            <div className="space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+
+                handleSubmit();
+              }}
+              className="space-y-4"
+            >
               {isRegister && (
                 <div>
                   <label className="mb-2 block text-sm font-medium">Name</label>
@@ -301,33 +314,32 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Error */}
-            {error && (
-              <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
-                {error}
-              </p>
-            )}
+              {/* Error */}
+              {error && (
+                <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+                  {error}
+                </p>
+              )}
 
-            {/* Submit */}
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="slate-button-primary mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-3"
-            >
-              {isRegister ? <UserPlus size={18} /> : <LogIn size={18} />}
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="slate-button-primary mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-3"
+              >
+                {isRegister ? <UserPlus size={18} /> : <LogIn size={18} />}
 
-              {loading
-                ? "Please wait..."
-                : isRegister
-                  ? "Create Account"
-                  : "Login"}
-            </button>
+                {loading
+                  ? "Please wait..."
+                  : isRegister
+                    ? "Create Account"
+                    : "Login"}
+              </button>
+            </form>
           </div>
         </div>
       </div>
     </div>
   );
 }
-  

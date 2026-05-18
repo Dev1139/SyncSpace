@@ -13,6 +13,7 @@ import EmptyState from "../components/ui/EmptyState";
 import WorkspaceCard from "../components/dashboard/WorkspaceCard";
 import CreateWorkspaceModal from "../components/dashboard/CreateWorkspaceModal";
 import DashboardTopbar from "../components/dashboard/DashboardTopbar";
+import ProfileDropdown from "../components/dashboard/ProfileDropdown";
 
 type Workspace = {
   id: string;
@@ -66,50 +67,62 @@ export default function DashboardPage() {
 
   return (
     <PageContainer>
-      {/* Header */}
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <DashboardTopbar/>
+      <div className="mx-auto w-full max-w-[1500px]">
+        {/* Header */}
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <DashboardTopbar />
 
-        <button
-          onClick={() => setModalOpen(true)}
-          className="slate-button-primary flex items-center justify-center gap-2 rounded-xl px-5 py-3"
-        >
-          <Plus size={18} />
-          Create Workspace
-        </button>
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setModalOpen(true)}
+              className="slate-button-primary flex h-12 items-center justify-center gap-2 rounded-2xl px-5"
+            >
+              <Plus size={18} />
+
+              <span>Create Workspace</span>
+            </button>
+
+            <ProfileDropdown />
+          </div>
+        </div>
+
+        {/* Empty State */}
+        {workspaces.length === 0 ? (
+          <div className="mt-20">
+            <EmptyState
+              title="No workspaces yet"
+              description="Create your first workspace to start collaborating with your team."
+              action={
+                <button
+                  onClick={() => setModalOpen(true)}
+                  className="slate-button-primary rounded-2xl px-5 py-3"
+                >
+                  Create Workspace
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          /* Workspace Grid */
+          <div className="mt-10 grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+            {workspaces.map((workspace) => (
+              <WorkspaceCard
+                key={workspace.id}
+                workspace={workspace}
+                onDeleted={fetchWorkspaces}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Create Workspace Modal */}
+        <CreateWorkspaceModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onCreated={fetchWorkspaces}
+        />
       </div>
-
-      {/* Empty State */}
-      {workspaces.length === 0 ? (
-        <div className="mt-10">
-          <EmptyState
-            title="No workspaces yet"
-            description="Create your first workspace to start collaborating with your team."
-            action={
-              <button
-                onClick={() => setModalOpen(true)}
-                className="slate-button-primary rounded-xl px-5 py-3"
-              >
-                Create Workspace
-              </button>
-            }
-          />
-        </div>
-      ) : (
-        /* Workspace Grid */
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {workspaces.map((workspace) => (
-            <WorkspaceCard key={workspace.id} workspace={workspace} onDeleted={fetchWorkspaces} />
-          ))}
-        </div>
-      )}
-
-      {/* Create Workspace Modal */}
-      <CreateWorkspaceModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={fetchWorkspaces}
-      />
     </PageContainer>
   );
 }

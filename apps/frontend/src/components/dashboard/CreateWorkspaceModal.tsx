@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import toast from "react-hot-toast";
 
@@ -20,6 +20,24 @@ export default function CreateWorkspaceModal({
   const [name, setName] = useState("");
 
   const [loading, setLoading] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Reset on close
+  useEffect(() => {
+    if (!open) {
+      setName("");
+    }
+  }, [open]);
+
+  // Autofocus
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [open]);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -51,13 +69,28 @@ export default function CreateWorkspaceModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Create Workspace">
-      <div className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+
+          handleCreate();
+        }}
+        className="space-y-5"
+      >
+        {/* Description */}
+        <p className="text-sm leading-6 text-muted">
+          Create a collaborative workspace to organize documents, projects, and
+          team members.
+        </p>
+
+        {/* Input */}
         <div>
           <label className="mb-2 block text-sm font-medium text-text">
             Workspace Name
           </label>
 
           <input
+            ref={inputRef}
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -66,14 +99,25 @@ export default function CreateWorkspaceModal({
           />
         </div>
 
-        <button
-          onClick={handleCreate}
-          disabled={loading}
-          className="slate-button-primary w-full rounded-xl py-3"
-        >
-          {loading ? "Creating..." : "Create Workspace"}
-        </button>
-      </div>
+        {/* Actions */}
+        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-border bg-surface px-5 py-3 text-sm font-medium text-text transition hover:bg-surface2"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="slate-button-primary rounded-xl px-5 py-3"
+          >
+            {loading ? "Creating..." : "Create Workspace"}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }

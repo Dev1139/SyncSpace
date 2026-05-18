@@ -26,8 +26,8 @@ export default function Toolbar({ editor }: any) {
     `inline-flex h-8 w-8 items-center justify-center rounded border text-sm font-medium transition
    ${
      isActive
-      ? "border-primary bg-primary text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]"
-      : "border-border2 bg-surface text-muted hover:bg-surface3 hover:text-text"
+       ? "border-primary bg-primary text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]"
+       : "border-border2 bg-surface text-muted hover:bg-surface3 hover:text-text"
    }`;
 
   return (

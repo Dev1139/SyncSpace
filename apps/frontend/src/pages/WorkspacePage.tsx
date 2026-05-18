@@ -1,27 +1,63 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, FileText, Moon, Plus, Search, Sun } from "lucide-react";
+
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import toast from "react-hot-toast";
 
-import { FileText, Plus } from "lucide-react";
+import { createDocument, getDocuments } from "../services/documentApi";
 
-import { getWorkspace } from "../services/workspaceApi";
-
-import { getDocuments, createDocument } from "../services/documentApi";
+import { getWorkspace, getWorkspaceMembers } from "../services/workspaceApi";
 
 import PageLoader from "../components/ui/PageLoader";
-import EmptyState from "../components/ui/EmptyState";
+
 import Editor from "../components/Editor";
+
+import DocumentActions from "../components/document/DocumentActions";
+
+import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 
 type Workspace = {
   id: string;
+
   name: string;
+
+  owner?: {
+    id: string;
+
+    name: string;
+
+    email: string;
+  };
+
+  _count?: {
+    members: number;
+  };
+};
+
+type WorkspaceMember = {
+  id: string;
+
+  role: "owner" | "editor" | "viewer";
+
+  user: {
+    id: string;
+
+    name: string;
+
+    email: string;
+
+    avatarUrl?: string;
+  };
 };
 
 type Document = {
   id: string;
+
   title: string;
+
   updatedAt: string;
 };
 
@@ -30,11 +66,19 @@ export default function WorkspacePage() {
 
   const { workspaceId, documentId } = useParams();
 
+  const { user } = useAuth();
+
+  const { theme, toggleTheme } = useTheme();
+
   const [loading, setLoading] = useState(true);
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
   const [documents, setDocuments] = useState<Document[]>([]);
+
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
+
+  const [search, setSearch] = useState("");
 
   const fetchWorkspaceData = async () => {
     if (!workspaceId) return;
@@ -42,17 +86,23 @@ export default function WorkspacePage() {
     try {
       setLoading(true);
 
-      const [workspaceRes, documentsRes] = await Promise.all([
+      const [workspaceRes, documentsRes, membersRes] = await Promise.all([
         getWorkspace(workspaceId),
 
         getDocuments(workspaceId),
+
+        getWorkspaceMembers(workspaceId),
       ]);
 
       setWorkspace((workspaceRes as any)?.data);
 
       setDocuments((documentsRes as any)?.data?.items || []);
+
+      setMembers((membersRes as any)?.data || []);
     } catch (error: any) {
       toast.error(error?.message || "Failed to load workspace");
+
+      navigate("/dashboard");
     } finally {
       setLoading(false);
     }
@@ -66,102 +116,194 @@ export default function WorkspacePage() {
     if (!workspaceId) return;
 
     try {
-      const res: any = await createDocument(workspaceId, {
+      const response: any = await createDocument(workspaceId, {
         title: "Untitled Document",
       });
 
+      const newDocument = response?.data;
+
       toast.success("Document created");
 
-      navigate(`/workspace/${workspaceId}/document/${res?.data?.id}`);
+      await fetchWorkspaceData();
+
+      navigate(`/workspace/${workspaceId}/document/${newDocument.id}`);
     } catch (error: any) {
       toast.error(error?.message || "Failed to create document");
     }
   };
 
-  // Loading
+  const filteredDocuments = useMemo(() => {
+    return documents.filter((document) =>
+      document.title.toLowerCase().includes(search.toLowerCase()),
+    );
+  }, [documents, search]);
+
+  const currentDocument = documents.find(
+    (document) => document.id === documentId,
+  );
+
+  const currentMember = members.find((member) => member.user.id === user?.id);
+
+  const canManage = currentMember?.role === "owner";
+
+  const canEdit =
+    currentMember?.role === "owner" || currentMember?.role === "editor";
+
   if (loading) {
     return <PageLoader text="Loading workspace..." />;
   }
 
   return (
-    <div className="flex h-screen bg-background text-text">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <aside className="flex w-[320px] flex-col border-r border-border bg-surface">
+      <aside className="flex w-[310px] flex-col border-r border-border bg-surface">
         {/* Header */}
-        <div className="border-b border-border p-5">
-          <h1 className="line-clamp-1 text-xl font-bold">{workspace?.name}</h1>
-
-          <p className="mt-1 text-sm text-muted">Workspace Documents</p>
-
+        <div className="border-b border-border p-4">
           <button
-            onClick={handleCreateDocument}
-            className="slate-button-primary mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3"
+            onClick={() => navigate("/dashboard")}
+            className="mb-4 flex items-center gap-2 text-sm text-muted transition hover:text-text"
           >
-            <Plus size={18} />
-            Create Document
+            <ArrowLeft size={16} />
+            Back to Dashboard
           </button>
+
+          {/* Workspace Card */}
+          {workspace && (
+            <div className="rounded-3xl border border-border bg-surface2 p-5">
+              <h1 className="truncate text-xl font-semibold text-text">
+                {workspace.name}
+              </h1>
+
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
+                <p>
+                  Owner:{" "}
+                  <span className="text-text">
+                    {workspace.owner?.name || "Unknown"}
+                  </span>
+                </p>
+
+                <p>{workspace._count?.members || 0} members</p>
+              </div>
+            </div>
+          )}
+
+          {/* Create Button */}
+          {canEdit && (
+            <button
+              onClick={handleCreateDocument}
+              className="slate-button-primary mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3"
+            >
+              <Plus size={18} />
+              Create Document
+            </button>
+          )}
+
+          {/* Search */}
+          <div className="relative mt-4">
+            <Search
+              size={16}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+            />
+
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search documents..."
+              className="w-full rounded-2xl border border-border bg-background py-3 pl-11 pr-4 text-sm text-text outline-none transition placeholder:text-subtle focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+            />
+          </div>
         </div>
 
         {/* Documents */}
         <div className="flex-1 overflow-y-auto p-3">
-          {documents.length === 0 ? (
-            <EmptyState
-              title="No documents yet"
-              description="Create your first collaborative document."
-            />
+          {filteredDocuments.length === 0 ? (
+            <div className="flex h-full items-center justify-center px-4 text-center">
+              <p className="text-sm text-muted">No documents found</p>
+            </div>
           ) : (
             <div className="space-y-2">
-              {documents.map((document) => (
-                <button
-                  key={document.id}
-                  onClick={() =>
-                    navigate(
-                      `/workspace/${workspaceId}/document/${document.id}`,
-                    )
-                  }
-                  className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left transition hover:border-border hover:bg-background"
-                >
-                  <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                    <FileText size={18} />
-                  </div>
+              {filteredDocuments.map((document) => {
+                const active = document.id === documentId;
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {document.title}
-                    </p>
+                return (
+                  <div
+                    key={document.id}
+                    className={`group flex items-center justify-between gap-2 rounded-2xl border px-3 py-3 transition ${
+                      active
+                        ? "border-primary/30 bg-primary/10"
+                        : "border-transparent hover:border-border hover:bg-surface2"
+                    }`}
+                  >
+                    <Link
+                      to={`/workspace/${workspaceId}/document/${document.id}`}
+                      className="min-w-0 flex flex-1 items-center gap-3"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <FileText size={16} />
+                      </div>
 
-                    <p className="mt-1 text-xs text-muted">
-                      Updated{" "}
-                      {new Date(document.updatedAt).toLocaleDateString()}
-                    </p>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-text">
+                          {document.title}
+                        </p>
+
+                        <p className="mt-1 text-xs text-muted">
+                          Updated{" "}
+                          {new Date(document.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </Link>
+
+                    {canManage && (
+                      <DocumentActions
+                        documentId={document.id}
+                        workspaceId={workspaceId!}
+                        currentTitle={document.title}
+                        onRefresh={fetchWorkspaceData}
+                      />
+                    )}
                   </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-hidden">
-        {documentId ? (
-          <Editor documentId={documentId} title="Untitled Document" />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
-                <FileText size={30} />
+      {/* Main */}
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="absolute right-5 top-5 z-50 rounded-2xl border border-border bg-surface p-3 text-muted transition hover:bg-surface2 hover:text-text"
+        >
+          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
+        {/* Content */}
+        <div className="flex-1 overflow-hidden p-8">
+          {documentId && currentDocument ? (
+            <Editor documentId={documentId} title={currentDocument.title} />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <div className="slate-panel max-w-md rounded-3xl p-10 text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-subtle">
+                  Workspace
+                </p>
+
+                <h1 className="mt-4 text-3xl font-bold tracking-tight text-text">
+                  Select a document
+                </h1>
+
+                <p className="mt-4 text-sm leading-7 text-muted">
+                  Choose an existing document from the sidebar or create a new
+                  collaborative document to start editing with your team.
+                </p>
               </div>
-
-              <h2 className="text-2xl font-bold">Select a document</h2>
-
-              <p className="mt-3 max-w-md leading-7 text-muted">
-                Open an existing document or create a new collaborative document
-                to start editing.
-              </p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );

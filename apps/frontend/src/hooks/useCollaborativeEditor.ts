@@ -25,10 +25,12 @@ export const useCollaborativeEditor = (
 
   const [users, setUsers] = useState<PresenceUser[]>([]);
   const [editor, setEditor] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
   const ydocRef = useRef<Y.Doc | null>(null);
   const activeDocumentIdRef = useRef<string | null>(null);
   const awarenessRef = useRef<Awareness | null>(null);
   const { currentWorkspaceId } = useWorkspace();
+  const connected = ws?.readyState === WebSocket.OPEN;
 
   useEffect(() => {
     if (!ws || !addListener || !removeListener) return;
@@ -47,7 +49,11 @@ export const useCollaborativeEditor = (
 
       if (msg.type === "awareness-update" && awarenessRef.current) {
         const update = new Uint8Array(msg.update);
-        awarenessProtocol.applyAwarenessUpdate(awarenessRef.current, update, ws);
+        awarenessProtocol.applyAwarenessUpdate(
+          awarenessRef.current,
+          update,
+          ws,
+        );
       }
     };
 
@@ -127,6 +133,7 @@ export const useCollaborativeEditor = (
 
     const updateHandler = (update: Uint8Array, origin: any) => {
       if (origin === "remote") return;
+      setSaving(true);
       send?.({
         type: "doc-update",
         data: {
@@ -134,6 +141,9 @@ export const useCollaborativeEditor = (
           update: Array.from(update),
         },
       });
+      setTimeout(() => {
+        setSaving(false);
+      }, 500);
     };
 
     ydoc.on("update", updateHandler);
@@ -144,7 +154,10 @@ export const useCollaborativeEditor = (
       const userList = states.map((s: any) => s.user).filter(Boolean);
       setUsers(userList);
 
-      const update = awarenessProtocol.encodeAwarenessUpdate(awareness, changed);
+      const update = awarenessProtocol.encodeAwarenessUpdate(
+        awareness,
+        changed,
+      );
       send?.({
         type: "awareness-update",
         data: {
@@ -168,5 +181,7 @@ export const useCollaborativeEditor = (
   return {
     editor,
     users,
+    saving,
+    connected,
   };
 };

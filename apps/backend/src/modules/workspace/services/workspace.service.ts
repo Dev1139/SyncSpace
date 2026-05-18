@@ -276,7 +276,11 @@ export class WorkspaceService {
         workspaceId,
       },
 
-      include: {
+      select: {
+        id: true,
+        role: true,
+        createdAt: true,
+
         user: {
           select: {
             id: true,

@@ -8,8 +8,18 @@ type UpdateTitlePayload = {
   title: string;
 };
 
-export async function getDocuments(workspaceId: string) {
-  return apiClient(`/workspace/${workspaceId}/documents`);
+export async function getDocuments(workspaceId: string, search?: string) {
+  const params = new URLSearchParams();
+
+  if (search?.trim()) {
+    params.append("search", search);
+  }
+
+  const query = params.toString();
+
+  return apiClient(
+    `/workspace/${workspaceId}/documents${query ? `?${query}` : ""}`,
+  );
 }
 
 export async function getDocument(documentId: string) {
