@@ -9,8 +9,15 @@ import { createWSServer } from './realtime/ws.server';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configuredFrontendUrls =
+    process.env.FRONTEND_URL?.split(',')
+      .map((url) => url.trim())
+      .filter(Boolean) || [];
+  const frontendUrls =
+    configuredFrontendUrls.length > 0
+      ? configuredFrontendUrls
+      : ['http://localhost:5173'];
 
-  // validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -18,24 +25,17 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: frontendUrls,
     credentials: true,
   });
 
-  // interceptors + filters
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());
 
   const prisma = app.get(PrismaService);
 
-  //  START WS SERVER
-  createWSServer(prisma);
-
   await app.listen(process.env.PORT ?? 3000);
-
-  console.log(
-    `HTTP Server running on http://localhost:${process.env.PORT ?? 3000}`,
-  );
+  createWSServer(prisma, app.getHttpServer());
 }
 
 bootstrap();

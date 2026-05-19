@@ -10,14 +10,16 @@ import EditorStatus from "./editor/EditorStatus";
 type Props = {
   documentId: string;
   title: string;
+  canEdit: boolean;
 };
 
-export default function Editor({ documentId, title }: Props) {
+export default function Editor({ documentId, title, canEdit }: Props) {
   const wsContext = useWS();
   const send = wsContext?.send;
   const { editor, users, saving, connected } = useCollaborativeEditor(
     documentId,
     wsContext,
+    canEdit,
   );
   const { localTitle, setLocalTitle } = useDocumentTitleSync(documentId, title);
 
@@ -39,6 +41,7 @@ export default function Editor({ documentId, title }: Props) {
               localTitle={localTitle}
               setLocalTitle={setLocalTitle}
               send={send}
+              disabled={!canEdit}
             />
             <div className="flex flex-col items-end gap-2">
               <ActiveUsers users={users} />
@@ -49,11 +52,17 @@ export default function Editor({ documentId, title }: Props) {
         </div>
 
         <div className="rounded-lg border border-border bg-gradient-to-b from-surface2 to-void p-3 shadow-panel sm:p-4 md:p-5">
-          <div className="rounded-2xl border border-border bg-surface/80 p-2 shadow-sm backdrop-blur">
-            <Toolbar editor={editor} />
-          </div>
+          {canEdit && (
+            <div className="rounded-2xl border border-border bg-surface/80 p-2 shadow-sm backdrop-blur">
+              <Toolbar editor={editor} />
+            </div>
+          )}
 
-          <div className="mt-5 rounded-2xl border border-border bg-void/80 px-6 py-8 shadow-2xl backdrop-blur sm:px-10 sm:py-10 md:px-14 md:py-14">
+          <div
+            className={`${
+              canEdit ? "mt-5" : ""
+            } rounded-2xl border border-border bg-void/80 px-6 py-8 shadow-2xl backdrop-blur sm:px-10 sm:py-10 md:px-14 md:py-14`}
+          >
             <EditorContent editor={editor} />
           </div>
         </div>

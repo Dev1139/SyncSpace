@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ArrowLeft, FileText, Moon, Plus, Search, Sun } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  Menu,
+  Moon,
+  Plus,
+  Search,
+  Sun,
+  X,
+} from "lucide-react";
 
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -82,6 +91,7 @@ export default function WorkspacePage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchWorkspaceData = async () => {
     if (!workspaceId) return;
@@ -213,21 +223,44 @@ export default function WorkspacePage() {
     return <PageLoader text="Loading workspace..." />;
   }
 
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <aside className="flex w-[310px] flex-col border-r border-border bg-surface">
-        {/* Header */}
-        <div className="border-b border-border p-4">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="mb-4 flex items-center gap-2 text-sm text-muted transition hover:text-text"
-          >
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </button>
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close document sidebar"
+          onClick={closeSidebar}
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+        />
+      )}
 
-          {/* Workspace Card */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-[310px] max-w-[86vw] shrink-0 flex-col border-r border-border bg-surface transition-transform duration-200 lg:static lg:z-auto lg:h-full lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="border-b border-border p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2 text-sm text-muted transition hover:text-text"
+            >
+              <ArrowLeft size={16} />
+              Back to Dashboard
+            </button>
+
+            <button
+              type="button"
+              aria-label="Close document sidebar"
+              onClick={closeSidebar}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-border text-muted transition hover:bg-surface2 hover:text-text lg:hidden"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
           {workspace && (
             <div className="rounded-3xl border border-border bg-surface2 p-5">
               <h1 className="truncate text-xl font-semibold text-text">
@@ -245,7 +278,6 @@ export default function WorkspacePage() {
             </div>
           )}
 
-          {/* Create Button */}
           {canEdit && (
             <button
               onClick={() => setCreateOpen(true)}
@@ -256,7 +288,6 @@ export default function WorkspacePage() {
             </button>
           )}
 
-          {/* Search */}
           <div className="relative mt-4">
             <Search
               size={16}
@@ -273,7 +304,6 @@ export default function WorkspacePage() {
           </div>
         </div>
 
-        {/* Documents */}
         <div className="flex-1 overflow-y-auto p-3">
           {filteredDocuments.length === 0 ? (
             <div className="flex h-full items-center justify-center px-4 text-center">
@@ -295,6 +325,7 @@ export default function WorkspacePage() {
                   >
                     <Link
                       to={`/workspace/${workspaceId}/document/${document.id}`}
+                      onClick={closeSidebar}
                       className="min-w-0 flex flex-1 items-center gap-3"
                     >
                       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -336,20 +367,30 @@ export default function WorkspacePage() {
         </div>
       </aside>
 
-      {/* Main */}
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Theme Toggle */}
+        <button
+          type="button"
+          aria-label="Open document sidebar"
+          onClick={() => setSidebarOpen(true)}
+          className="absolute left-4 top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-surface text-muted transition hover:bg-surface2 hover:text-text lg:hidden"
+        >
+          <Menu size={20} />
+        </button>
+
         <button
           onClick={toggleTheme}
-          className="absolute right-5 top-5 z-50 rounded-2xl border border-border bg-surface p-3 text-muted transition hover:bg-surface2 hover:text-text"
+          className="absolute right-4 top-4 z-50 rounded-2xl border border-border bg-surface p-3 text-muted transition hover:bg-surface2 hover:text-text md:right-5 md:top-5"
         >
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden p-8">
+        <div className="flex-1 overflow-hidden p-4 sm:p-6 md:p-8">
           {documentId && currentDocument ? (
-            <Editor documentId={documentId} title={currentDocument.title} />
+            <Editor
+              documentId={documentId}
+              title={currentDocument.title}
+              canEdit={canEdit}
+            />
           ) : (
             <div className="flex h-full items-center justify-center">
               <div className="slate-panel max-w-md rounded-3xl p-10 text-center">

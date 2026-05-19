@@ -35,18 +35,21 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
     const connect = () => {
       const token = localStorage.getItem("token");
 
-      if (!token || !shouldReconnect) return;
+      if (!token || !WS_URL || !shouldReconnect) return;
 
       socket = new WebSocket(`${WS_URL}?token=${token}`);
 
       socket.onopen = () => {
-        console.log("WS connected");
         setWs(socket);
       };
 
       socket.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        listeners.current.forEach((cb) => cb(msg));
+        try {
+          const msg = JSON.parse(event.data);
+          listeners.current.forEach((cb) => cb(msg));
+        } catch {
+          // Ignore malformed realtime payloads.
+        }
       };
 
       socket.onclose = () => {
@@ -54,8 +57,11 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
 
         if (!shouldReconnect) return;
 
-        console.log("WS disconnected... reconnecting");
         reconnectTimer = window.setTimeout(connect, 2000);
+      };
+
+      socket.onerror = () => {
+        socket.close();
       };
     };
 

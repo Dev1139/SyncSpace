@@ -1,6 +1,7 @@
 import * as WebSocket from 'ws';
 import * as Y from 'yjs';
 import * as jwt from 'jsonwebtoken';
+import type { Server } from 'http';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -11,28 +12,16 @@ type AuthenticatedSocket = WebSocket & {
   workspaceId?: string;
 };
 
-export async function createWSServer(prisma: PrismaService) {
+export async function createWSServer(prisma: PrismaService, server: Server) {
   const wss = new WebSocket.Server({
-    port: 3001,
+    server,
+    path: '/ws',
   });
 
-  console.log('WebSocket server running on ws://localhost:3001');
-
-  // Active collaborative documents
   const docs = new Map<string, Y.Doc>();
-
-  // Document rooms
   const rooms = new Map<string, Set<AuthenticatedSocket>>();
-
-  // Workspace rooms
   const workspaceRooms = new Map<string, Set<AuthenticatedSocket>>();
-
-  // Debounced save timers
   const saveTimers = new Map<string, NodeJS.Timeout>();
-
-  // =========================
-  // HELPERS
-  // =========================
 
   const broadcastToWorkspace = (workspaceId: string, message: unknown) => {
     const clients = workspaceRooms.get(workspaceId);
@@ -86,17 +75,7 @@ export async function createWSServer(prisma: PrismaService) {
     return doc;
   };
 
-  // =========================
-  // CONNECTION
-  // =========================
-
   wss.on('connection', (ws: AuthenticatedSocket, request) => {
-    console.log('Client connected');
-
-    // =========================
-    // JWT AUTH
-    // =========================
-
     const url = request.url || '';
 
     const params = new URLSearchParams(url.split('?')[1]);
@@ -114,10 +93,7 @@ export async function createWSServer(prisma: PrismaService) {
       };
 
       ws.userId = payload.sub;
-
-      console.log('User connected:', payload.sub);
     } catch {
-      console.log('Invalid token');
       ws.close();
       return;
     }
@@ -127,10 +103,6 @@ export async function createWSServer(prisma: PrismaService) {
       return;
     }
 
-    // =========================
-    // MESSAGE HANDLER
-    // =========================
-
     ws.on('message', async (message) => {
       try {
         const parsed = JSON.parse(message.toString()) as {
@@ -139,10 +111,6 @@ export async function createWSServer(prisma: PrismaService) {
         };
 
         const { type, data } = parsed;
-
-        // =========================
-        // JOIN WORKSPACE
-        // =========================
 
         if (type === 'join-workspace') {
           const { workspaceId } = data;
@@ -168,10 +136,6 @@ export async function createWSServer(prisma: PrismaService) {
           workspaceRooms.get(workspaceId)!.add(ws);
         }
 
-        // =========================
-        // JOIN DOCUMENT
-        // =========================
-
         if (type === 'join-document') {
           const { documentId, workspaceId } = data;
 
@@ -190,8 +154,6 @@ export async function createWSServer(prisma: PrismaService) {
           });
 
           if (!document) {
-            console.log('Access denied');
-
             ws.close();
             return;
           }
@@ -209,26 +171,22 @@ export async function createWSServer(prisma: PrismaService) {
             return;
           }
 
-          // Attach socket context
           ws.role = membership.role;
           ws.documentId = documentId;
           ws.workspaceId = workspaceId;
 
-          // Document room
           if (!rooms.has(documentId)) {
             rooms.set(documentId, new Set());
           }
 
           rooms.get(documentId)!.add(ws);
 
-          // Workspace room
           if (!workspaceRooms.has(workspaceId)) {
             workspaceRooms.set(workspaceId, new Set());
           }
 
           workspaceRooms.get(workspaceId)!.add(ws);
 
-          // Load Yjs doc
           const ydoc = await loadDocument(documentId);
 
           const state = Y.encodeStateAsUpdate(ydoc);
@@ -240,13 +198,7 @@ export async function createWSServer(prisma: PrismaService) {
               update: Array.from(state),
             }),
           );
-
-          console.log(`Joined document: ${documentId}`);
         }
-
-        // =========================
-        // AWARENESS UPDATE
-        // =========================
 
         if (type === 'awareness-update') {
           const { documentId, update } = data;
@@ -268,10 +220,6 @@ export async function createWSServer(prisma: PrismaService) {
           });
         }
 
-        // =========================
-        // TITLE CHANGE
-        // =========================
-
         if (type === 'title-change') {
           const { documentId, title, workspaceId } = data;
 
@@ -285,10 +233,6 @@ export async function createWSServer(prisma: PrismaService) {
           });
         }
 
-        // =========================
-        // DOCUMENT CREATED
-        // =========================
-
         if (type === 'document-created') {
           const { workspaceId, document } = data;
 
@@ -297,10 +241,6 @@ export async function createWSServer(prisma: PrismaService) {
             data: document,
           });
         }
-
-        // =========================
-        // DOCUMENT DELETED
-        // =========================
 
         if (type === 'document-deleted') {
           const { workspaceId, documentId } = data;
@@ -314,23 +254,15 @@ export async function createWSServer(prisma: PrismaService) {
           });
         }
 
-        // =========================
-        // DOCUMENT UPDATE
-        // =========================
-
         if (type === 'doc-update') {
           const { documentId, update } = data;
 
-          // Ensure same document
           if (ws.documentId !== documentId) {
             ws.close();
             return;
           }
 
-          // Prevent viewers editing
           if (ws.role === 'viewer') {
-            console.log('Viewer tried to edit');
-
             return;
           }
 
@@ -338,10 +270,8 @@ export async function createWSServer(prisma: PrismaService) {
 
           const uint8 = new Uint8Array(update);
 
-          // Apply update
           Y.applyUpdate(ydoc, uint8);
 
-          // Broadcast to others
           const clients = rooms.get(documentId);
 
           if (clients) {
@@ -357,10 +287,6 @@ export async function createWSServer(prisma: PrismaService) {
               }
             });
           }
-
-          // =========================
-          // DEBOUNCED SAVE
-          // =========================
 
           if (saveTimers.has(documentId)) {
             clearTimeout(saveTimers.get(documentId));
@@ -384,8 +310,6 @@ export async function createWSServer(prisma: PrismaService) {
                 plainText,
               },
             });
-
-            console.log(`Saved document: ${documentId}`);
           }, 1500);
 
           saveTimers.set(documentId, timer);
@@ -395,18 +319,10 @@ export async function createWSServer(prisma: PrismaService) {
       }
     });
 
-    // =========================
-    // DISCONNECT
-    // =========================
-
     ws.on('close', () => {
-      console.log('Client disconnected');
-
-      // Remove from document rooms
       rooms.forEach((clients, documentId) => {
         clients.delete(ws);
 
-        // Cleanup empty room
         if (clients.size === 0) {
           rooms.delete(documentId);
 
@@ -420,7 +336,6 @@ export async function createWSServer(prisma: PrismaService) {
         }
       });
 
-      // Remove from workspace rooms
       workspaceRooms.forEach((clients, workspaceId) => {
         clients.delete(ws);
 

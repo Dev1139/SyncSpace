@@ -20,6 +20,7 @@ type PresenceUser = {
 export const useCollaborativeEditor = (
   documentId: string,
   wsContext: WSContextType | null,
+  canEdit = true,
 ) => {
   const ws = wsContext?.ws;
   const addListener = wsContext?.addListener;
@@ -95,6 +96,7 @@ export const useCollaborativeEditor = (
     setUsers([]);
 
     const newEditor = new TiptapEditor({
+      editable: canEdit,
       extensions: [
         StarterKit.configure({
           undoRedo: false,
@@ -115,7 +117,11 @@ export const useCollaborativeEditor = (
         ydocRef.current = null;
       }
     };
-  }, [documentId]);
+  }, [documentId, canEdit]);
+
+  useEffect(() => {
+    editor?.setEditable(canEdit);
+  }, [editor, canEdit]);
 
   useEffect(() => {
     if (!editor || !documentId) return;
@@ -156,6 +162,7 @@ export const useCollaborativeEditor = (
 
     const updateHandler = (update: Uint8Array, origin: any) => {
       if (origin === "remote") return;
+      if (!canEdit) return;
       setSaving(true);
       send?.({
         type: "doc-update",
@@ -215,7 +222,7 @@ export const useCollaborativeEditor = (
       ydoc.destroy();
       setUsers([]);
     };
-  }, [editor, documentId, send, user?.email, user?.id, user?.name]);
+  }, [canEdit, editor, documentId, send, user?.email, user?.id, user?.name]);
 
   return {
     editor,
