@@ -4,10 +4,14 @@ import { ChevronDown, LogOut, User } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 
+import ProfileModal from "./ProfileModal";
+
 export default function ProfileDropdown() {
   const { user, logout } = useAuth();
 
   const [open, setOpen] = useState(false);
+
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -66,28 +70,36 @@ export default function ProfileDropdown() {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-14 z-50 w-60 rounded-2xl border border-border bg-surface p-2 shadow-2xl">
-          {/* User Info */}
-          <div className="border-b border-border px-3 py-3">
-            <p className="truncate text-sm font-medium text-text">
-              {user?.name}
-            </p>
-
-            <p className="mt-1 truncate text-xs text-muted">{user?.email}</p>
-          </div>
-
+        <div className="absolute right-0 top-14 z-50 min-w-[190px] rounded-2xl border border-border bg-surface p-2 shadow-2xl backdrop-blur-xl">
           {/* Actions */}
-          <div className="pt-2">
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => {
+                setProfileOpen(true);
+
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:bg-background"
+            >
+              <User size={16} />
+
+              <span>Profile</span>
+            </button>
+
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-danger transition hover:bg-background"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-400 transition hover:bg-[#2a1620] hover:text-red-300"
             >
               <LogOut size={16} />
-              Logout
+
+              <span>Logout</span>
             </button>
           </div>
         </div>
       )}
+
+      {/* Profile Modal */}
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   );
 }

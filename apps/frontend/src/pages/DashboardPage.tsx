@@ -69,11 +69,11 @@ export default function DashboardPage() {
     <PageContainer>
       <div className="mx-auto w-full max-w-[1500px]">
         {/* Header */}
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <DashboardTopbar />
 
           {/* Actions */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3 self-start lg:self-auto">
             <button
               onClick={() => setModalOpen(true)}
               className="slate-button-primary flex h-12 items-center justify-center gap-2 rounded-2xl px-5"
@@ -111,6 +111,7 @@ export default function DashboardPage() {
                 key={workspace.id}
                 workspace={workspace}
                 onDeleted={fetchWorkspaces}
+                onUpdated={fetchWorkspaces}
               />
             ))}
           </div>

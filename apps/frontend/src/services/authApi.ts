@@ -11,6 +11,29 @@ type RegisterPayload = {
   password: string;
 };
 
+type UpdateProfilePayload = {
+  name: string;
+};
+
+type UpdatePasswordPayload = {
+  oldPassword: string;
+  newPassword: string;
+};
+
+export async function updateProfile(data: UpdateProfilePayload) {
+  return apiClient("/auth/profile", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updatePassword(data: UpdatePasswordPayload) {
+  return apiClient("/auth/password", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function login(data: LoginPayload) {
   return apiClient("/auth/login", {
     method: "POST",

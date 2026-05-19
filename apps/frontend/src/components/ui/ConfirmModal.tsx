@@ -55,8 +55,8 @@ export default function ConfirmModal({
             onClick={onConfirm}
             className={`rounded-xl px-5 py-3 text-sm font-medium text-white transition ${
               danger
-                ? "bg-danger hover:opacity-90"
-                : "bg-primary hover:opacity-90"
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-primary text-white hover:opacity-90"
             }`}
           >
             {loading ? "Please wait..." : confirmText}
