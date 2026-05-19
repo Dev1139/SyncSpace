@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import toast from "react-hot-toast";
 
-import { createDocument, getDocuments } from "../services/documentApi";
+import { getDocuments } from "../services/documentApi";
 
 import { getWorkspace, getWorkspaceMembers } from "../services/workspaceApi";
 
@@ -17,20 +17,15 @@ import Editor from "../components/Editor";
 import DocumentActions from "../components/document/DocumentActions";
 
 import { useTheme } from "../context/ThemeContext";
+
 import { useAuth } from "../context/AuthContext";
+
+import CreateDocumentModal from "../components/document/CreateDocumentModal";
 
 type Workspace = {
   id: string;
 
   name: string;
-
-  owner?: {
-    id: string;
-
-    name: string;
-
-    email: string;
-  };
 
   _count?: {
     members: number;
@@ -80,6 +75,10 @@ export default function WorkspacePage() {
 
   const [search, setSearch] = useState("");
 
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
   const fetchWorkspaceData = async () => {
     if (!workspaceId) return;
 
@@ -112,26 +111,6 @@ export default function WorkspacePage() {
     fetchWorkspaceData();
   }, [workspaceId]);
 
-  const handleCreateDocument = async () => {
-    if (!workspaceId) return;
-
-    try {
-      const response: any = await createDocument(workspaceId, {
-        title: "Untitled Document",
-      });
-
-      const newDocument = response?.data;
-
-      toast.success("Document created");
-
-      await fetchWorkspaceData();
-
-      navigate(`/workspace/${workspaceId}/document/${newDocument.id}`);
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to create document");
-    }
-  };
-
   const filteredDocuments = useMemo(() => {
     return documents.filter((document) =>
       document.title.toLowerCase().includes(search.toLowerCase()),
@@ -144,10 +123,13 @@ export default function WorkspacePage() {
 
   const currentMember = members.find((member) => member.user.id === user?.id);
 
-  const canManage = currentMember?.role === "owner";
+  const canManage =
+    currentMember?.role === "owner" || currentMember?.role === "editor";
 
   const canEdit =
     currentMember?.role === "owner" || currentMember?.role === "editor";
+
+  const owner = members.find((member) => member.role === "owner")?.user;
 
   if (loading) {
     return <PageLoader text="Loading workspace..." />;
@@ -177,9 +159,7 @@ export default function WorkspacePage() {
               <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
                 <p>
                   Owner:{" "}
-                  <span className="text-text">
-                    {workspace.owner?.name || "Unknown"}
-                  </span>
+                  <span className="text-text">{owner?.name || "Unknown"}</span>
                 </p>
 
                 <p>{workspace._count?.members || 0} members</p>
@@ -190,7 +170,7 @@ export default function WorkspacePage() {
           {/* Create Button */}
           {canEdit && (
             <button
-              onClick={handleCreateDocument}
+              onClick={() => setCreateOpen(true)}
               className="slate-button-primary mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3"
             >
               <Plus size={18} />
@@ -260,7 +240,14 @@ export default function WorkspacePage() {
                         documentId={document.id}
                         workspaceId={workspaceId!}
                         currentTitle={document.title}
+                        role={currentMember?.role || "viewer"}
                         onRefresh={fetchWorkspaceData}
+                        isOpen={openMenuId === document.id}
+                        onToggle={() =>
+                          setOpenMenuId(
+                            openMenuId === document.id ? null : document.id,
+                          )
+                        }
                       />
                     )}
                   </div>
@@ -303,6 +290,17 @@ export default function WorkspacePage() {
               </div>
             </div>
           )}
+
+          <CreateDocumentModal
+            open={createOpen}
+            workspaceId={workspaceId!}
+            onClose={() => setCreateOpen(false)}
+            onCreated={async (newDocumentId) => {
+              await fetchWorkspaceData();
+
+              navigate(`/workspace/${workspaceId}/document/${newDocumentId}`);
+            }}
+          />
         </div>
       </main>
     </div>

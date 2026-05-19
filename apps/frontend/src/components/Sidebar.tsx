@@ -34,6 +34,8 @@ export default function Sidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempTitle, setTempTitle] = useState("");
 
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
   const handleRename = (id: string) => {
     if (!tempTitle.trim()) {
       setEditingId(null);
@@ -56,7 +58,8 @@ export default function Sidebar({
               {workspaceName}
             </h1>
             <p className="text-sm text-muted">
-              {documents.length} {documents.length === 1 ? "document" : "documents"}
+              {documents.length}{" "}
+              {documents.length === 1 ? "document" : "documents"}
             </p>
           </div>
         </div>
@@ -105,7 +108,9 @@ export default function Sidebar({
       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
         {documents.length === 0 ? (
           <div className="rounded border border-dashed border-border bg-void/40 p-4 text-sm text-muted">
-            {search ? "No documents found" : "Create your first document to begin."}
+            {search
+              ? "No documents found"
+              : "Create your first document to begin."}
           </div>
         ) : (
           documents.map((doc) => (

@@ -8,6 +8,7 @@ import { Editor as TiptapEditor } from "@tiptap/core";
 import { createCursorPlugin } from "../components/editor/createCursorPlugin";
 import type { WSContextType } from "../context/WebContextProvider";
 import { useWorkspace } from "../context/WorkspaceContext";
+import { useAuth } from "../context/AuthContext";
 
 type PresenceUser = {
   name: string;
@@ -22,6 +23,8 @@ export const useCollaborativeEditor = (
   const addListener = wsContext?.addListener;
   const removeListener = wsContext?.removeListener;
   const send = wsContext?.send;
+
+  const { user } = useAuth();
 
   const [users, setUsers] = useState<PresenceUser[]>([]);
   const [editor, setEditor] = useState<any>(null);
@@ -115,9 +118,21 @@ export const useCollaborativeEditor = (
     awarenessRef.current = awareness;
     (editor as any).registerPlugin(createCursorPlugin(awareness));
 
+    const userColor =
+      "#" +
+      (
+        (user?.id || "syncspace")
+          .split("")
+          .reduce((acc, char) => char.charCodeAt(0) + acc, 0) % 16777215
+      )
+        .toString(16)
+        .padStart(6, "0");
+
     awareness.setLocalStateField("user", {
-      name: "User " + Math.floor(Math.random() * 100),
-      color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+      id: user?.id,
+      name: user?.name || "Anonymous",
+      email: user?.email,
+      color: userColor,
     });
 
     const updateCursor = () => {
