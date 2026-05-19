@@ -11,6 +11,8 @@ import { useWorkspace } from "../context/WorkspaceContext";
 import { useAuth } from "../context/AuthContext";
 
 type PresenceUser = {
+  id?: string;
+  clientId: number;
   name: string;
   color: string;
 };
@@ -34,6 +36,12 @@ export const useCollaborativeEditor = (
   const awarenessRef = useRef<Awareness | null>(null);
   const { currentWorkspaceId } = useWorkspace();
   const connected = ws?.readyState === WebSocket.OPEN;
+
+  useEffect(() => {
+    if (!connected) {
+      setUsers([]);
+    }
+  }, [connected]);
 
   useEffect(() => {
     if (!ws || !addListener || !removeListener) return;
@@ -165,8 +173,22 @@ export const useCollaborativeEditor = (
 
     const awarenessHandler = ({ added, updated, removed }: any) => {
       const changed = added.concat(updated).concat(removed);
-      const states = Array.from(awareness.getStates().values());
-      const userList = states.map((s: any) => s.user).filter(Boolean);
+      const userMap = new Map<string, PresenceUser>();
+
+      awareness.getStates().forEach((state: any, clientId) => {
+        if (!state.user) return;
+
+        const key = state.user.id || String(clientId);
+
+        userMap.set(key, {
+          id: state.user.id,
+          clientId,
+          name: state.user.name,
+          color: state.user.color,
+        });
+      });
+
+      const userList = Array.from(userMap.values());
       setUsers(userList);
 
       const update = awarenessProtocol.encodeAwarenessUpdate(
@@ -185,13 +207,15 @@ export const useCollaborativeEditor = (
     awareness.on("update", awarenessHandler);
 
     return () => {
+      awareness.setLocalState(null);
       editor.off("selectionUpdate", updateCursor);
       ydoc.off("update", updateHandler);
       awareness.off("update", awarenessHandler);
       awareness.destroy();
       ydoc.destroy();
+      setUsers([]);
     };
-  }, [editor, documentId, send]);
+  }, [editor, documentId, send, user?.email, user?.id, user?.name]);
 
   return {
     editor,

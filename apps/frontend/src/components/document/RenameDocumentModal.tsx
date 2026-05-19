@@ -15,7 +15,7 @@ type Props = {
 
   onClose: () => void;
 
-  onSuccess?: () => void;
+  onSuccess?: (title: string) => void;
 };
 
 export default function RenameDocumentModal({
@@ -43,13 +43,15 @@ export default function RenameDocumentModal({
     try {
       setLoading(true);
 
+      const nextTitle = title.trim();
+
       await updateDocumentTitle(documentId, {
-        title,
+        title: nextTitle,
       });
 
       toast.success("Document renamed");
 
-      onSuccess?.();
+      onSuccess?.(nextTitle);
 
       onClose();
     } catch (error: any) {

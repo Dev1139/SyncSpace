@@ -53,7 +53,7 @@ export default function Editor({ documentId, title }: Props) {
             <Toolbar editor={editor} />
           </div>
 
-          <div className="mt-5 rounded-2xl border border-border bg-[#0f172a]/70 px-6 py-8 shadow-2xl backdrop-blur sm:px-10 sm:py-10 md:px-14 md:py-14">
+          <div className="mt-5 rounded-2xl border border-border bg-void/80 px-6 py-8 shadow-2xl backdrop-blur sm:px-10 sm:py-10 md:px-14 md:py-14">
             <EditorContent editor={editor} />
           </div>
         </div>

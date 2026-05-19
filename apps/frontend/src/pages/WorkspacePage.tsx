@@ -21,6 +21,8 @@ import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 
 import CreateDocumentModal from "../components/document/CreateDocumentModal";
+import { useWS } from "../context/WebContextProvider";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 type Workspace = {
   id: string;
@@ -64,6 +66,8 @@ export default function WorkspacePage() {
   const { user } = useAuth();
 
   const { theme, toggleTheme } = useTheme();
+  const wsContext = useWS();
+  const { setCurrentWorkspaceId } = useWorkspace();
 
   const [loading, setLoading] = useState(true);
 
@@ -110,6 +114,80 @@ export default function WorkspacePage() {
   useEffect(() => {
     fetchWorkspaceData();
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (workspaceId) {
+      setCurrentWorkspaceId(workspaceId);
+    }
+  }, [workspaceId, setCurrentWorkspaceId]);
+
+  useEffect(() => {
+    if (!workspaceId || !wsContext?.ws || !wsContext.addListener) return;
+    if (wsContext.ws.readyState !== WebSocket.OPEN) return;
+
+    wsContext.send({
+      type: "join-workspace",
+      data: {
+        workspaceId,
+      },
+    });
+  }, [workspaceId, wsContext?.ws, wsContext?.send]);
+
+  useEffect(() => {
+    if (!workspaceId || !wsContext?.addListener || !wsContext.removeListener) {
+      return;
+    }
+
+    const handler = (msg: any) => {
+      if (msg.type === "title-change") {
+        const { documentId: changedDocumentId, title } = msg.data || {};
+
+        if (!changedDocumentId || typeof title !== "string") return;
+
+        setDocuments((prev) =>
+          prev.map((document) =>
+            document.id === changedDocumentId
+              ? { ...document, title }
+              : document,
+          ),
+        );
+      }
+
+      if (msg.type === "document-created") {
+        const document = msg.data;
+
+        if (!document?.id) return;
+
+        setDocuments((prev) => {
+          if (prev.some((item) => item.id === document.id)) return prev;
+          return [document, ...prev];
+        });
+      }
+
+      if (msg.type === "document-deleted") {
+        const { documentId: deletedDocumentId } = msg.data || {};
+
+        if (!deletedDocumentId) return;
+
+        setDocuments((prev) =>
+          prev.filter((document) => document.id !== deletedDocumentId),
+        );
+
+        if (documentId === deletedDocumentId) {
+          navigate(`/workspace/${workspaceId}`);
+        }
+      }
+    };
+
+    wsContext.addListener(handler);
+    return () => wsContext.removeListener(handler);
+  }, [
+    documentId,
+    navigate,
+    workspaceId,
+    wsContext?.addListener,
+    wsContext?.removeListener,
+  ]);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((document) =>
@@ -295,10 +373,33 @@ export default function WorkspacePage() {
             open={createOpen}
             workspaceId={workspaceId!}
             onClose={() => setCreateOpen(false)}
-            onCreated={async (newDocumentId) => {
-              await fetchWorkspaceData();
+            onCreated={(newDocument) => {
+              setDocuments((prev) => {
+                if (prev.some((document) => document.id === newDocument.id)) {
+                  return prev;
+                }
 
-              navigate(`/workspace/${workspaceId}/document/${newDocumentId}`);
+                return [
+                  {
+                    ...newDocument,
+                    updatedAt: newDocument.updatedAt || new Date().toISOString(),
+                  },
+                  ...prev,
+                ];
+              });
+
+              wsContext?.send({
+                type: "document-created",
+                data: {
+                  workspaceId,
+                  document: {
+                    ...newDocument,
+                    updatedAt: newDocument.updatedAt || new Date().toISOString(),
+                  },
+                },
+              });
+
+              navigate(`/workspace/${workspaceId}/document/${newDocument.id}`);
             }}
           />
         </div>

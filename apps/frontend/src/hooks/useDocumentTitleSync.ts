@@ -1,50 +1,48 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEFAULT_DOCUMENT_TITLE } from "../constants/appConfig";
 
-import { getDocument, updateDocumentTitle } from "../services/documentApi";
+import { updateDocumentTitle } from "../services/documentApi";
 
 export const useDocumentTitleSync = (documentId: string, title: string) => {
   const [localTitle, setLocalTitle] = useState(DEFAULT_DOCUMENT_TITLE);
 
-  const isFirstLoad = useRef(true);
+  const isLocalEdit = useRef(false);
 
   useEffect(() => {
-    setLocalTitle(title || DEFAULT_DOCUMENT_TITLE);
+    const nextTitle = title || DEFAULT_DOCUMENT_TITLE;
+
+    setLocalTitle((currentTitle) => {
+      if (currentTitle === nextTitle) return currentTitle;
+
+      isLocalEdit.current = false;
+      return nextTitle;
+    });
   }, [title]);
 
   useEffect(() => {
-    if (!documentId) return;
-
-    const fetchTitle = async () => {
-      try {
-        const doc = await getDocument(documentId);
-
-        setLocalTitle(doc?.data?.title || DEFAULT_DOCUMENT_TITLE);
-
-        isFirstLoad.current = true;
-      } catch (error) {
-        console.error("Failed to fetch document title", error);
-      }
-    };
-
-    fetchTitle();
+    isLocalEdit.current = false;
+    setLocalTitle(title || DEFAULT_DOCUMENT_TITLE);
   }, [documentId]);
+
+  const updateLocalTitle = useCallback((value: string) => {
+    isLocalEdit.current = true;
+    setLocalTitle(value);
+  }, []);
 
   useEffect(() => {
     if (!documentId) return;
 
-    if (!localTitle || localTitle.trim() === "") return;
+    if (!isLocalEdit.current) return;
 
-    if (isFirstLoad.current) {
-      isFirstLoad.current = false;
-      return;
-    }
+    const nextTitle = localTitle.trim();
+
+    if (!nextTitle) return;
 
     const timeout = setTimeout(async () => {
       try {
         await updateDocumentTitle(documentId, {
-          title: localTitle,
+          title: nextTitle,
         });
       } catch (error) {
         console.error("Failed to update title", error);
@@ -56,6 +54,6 @@ export const useDocumentTitleSync = (documentId: string, title: string) => {
 
   return {
     localTitle,
-    setLocalTitle,
+    setLocalTitle: updateLocalTitle,
   };
 };

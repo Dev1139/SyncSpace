@@ -13,7 +13,7 @@ type Props = {
 
   onClose: () => void;
 
-  onCreated: (documentId: string) => void;
+  onCreated: (document: { id: string; title: string; updatedAt?: string }) => void;
 };
 
 export default function CreateDocumentModal({
@@ -48,7 +48,7 @@ export default function CreateDocumentModal({
 
       onClose();
 
-      onCreated(newDocument.id);
+      onCreated(newDocument);
     } catch (error: any) {
       toast.error(error?.message || "Failed to create document");
     } finally {

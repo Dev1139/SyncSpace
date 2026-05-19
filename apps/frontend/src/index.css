@@ -90,55 +90,78 @@ body {
 .ProseMirror {
   min-height: 70vh;
   outline: none;
-
   font-size: 16px;
-  line-height: 1.85;
-
-  color: #e2e8f0;
+  line-height: 1.75;
+  color: rgb(var(--color-text));
 }
 
 /* Paragraphs */
 .ProseMirror p {
-  margin: 1rem 0;
+  margin: 0.9rem 0;
 }
 
 /* Headings */
 .ProseMirror h1 {
   font-size: 2.2rem;
+  line-height: 1.15;
   font-weight: 700;
-  margin: 2rem 0 1rem;
+  margin: 2rem 0 0.9rem;
+  color: rgb(var(--color-text));
 }
 
 .ProseMirror h2 {
   font-size: 1.8rem;
+  line-height: 1.2;
   font-weight: 700;
-  margin: 1.8rem 0 1rem;
+  margin: 1.7rem 0 0.85rem;
+  color: rgb(var(--color-text));
 }
 
 .ProseMirror h3 {
   font-size: 1.4rem;
+  line-height: 1.25;
   font-weight: 600;
-  margin: 1.5rem 0 0.8rem;
+  margin: 1.4rem 0 0.75rem;
+  color: rgb(var(--color-text));
 }
 
 /* Lists */
 .ProseMirror ul,
 .ProseMirror ol {
-  padding-left: 1.5rem;
-  margin: 1rem 0;
+  padding-left: 1.75rem;
+  margin: 0.9rem 0 1.1rem;
+  color: rgb(var(--color-text));
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
 }
 
 .ProseMirror li {
-  margin: 0.4rem 0;
+  margin: 0.35rem 0;
+  padding-left: 0.2rem;
+}
+
+.ProseMirror li::marker {
+  color: rgb(var(--color-muted));
+  font-weight: 600;
+}
+
+.ProseMirror li p {
+  margin: 0.25rem 0;
 }
 
 /* Blockquote */
 .ProseMirror blockquote {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid rgb(var(--color-primary));
 
   padding-left: 1rem;
 
-  color: #94a3b8;
+  color: rgb(var(--color-muted));
 
   margin: 1.5rem 0;
 }

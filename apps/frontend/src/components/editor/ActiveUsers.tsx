@@ -1,4 +1,6 @@
 type PresenceUser = {
+  id?: string;
+  clientId?: number;
   name: string;
   color: string;
 };
@@ -8,18 +10,27 @@ type ActiveUsersProps = {
 };
 
 export default function ActiveUsers({ users }: ActiveUsersProps) {
-  if (users.length === 0) return null;
+  const uniqueUsers = Array.from(
+    users
+      .reduce((map, user) => {
+        map.set(user.id || String(user.clientId ?? user.name), user);
+        return map;
+      }, new Map<string, PresenceUser>())
+      .values(),
+  );
 
-  const visibleUsers = users.slice(0, 4);
+  if (uniqueUsers.length === 0) return null;
 
-  const remainingUsers = users.length - 4;
+  const visibleUsers = uniqueUsers.slice(0, 3);
+
+  const remainingUsers = uniqueUsers.length - visibleUsers.length;
 
   return (
     <div className="flex items-center">
       <div className="flex -space-x-2">
         {visibleUsers.map((user, index) => (
           <div
-            key={`${user.name}-${index}`}
+            key={user.id || String(user.clientId ?? index)}
             className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface2 text-xs font-bold text-white shadow-float"
             style={{
               backgroundColor: user.color,

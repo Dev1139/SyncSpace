@@ -141,6 +141,34 @@ export async function createWSServer(prisma: PrismaService) {
         const { type, data } = parsed;
 
         // =========================
+        // JOIN WORKSPACE
+        // =========================
+
+        if (type === 'join-workspace') {
+          const { workspaceId } = data;
+
+          const membership = await prisma.workspaceMember.findFirst({
+            where: {
+              userId: ws.userId,
+              workspaceId,
+            },
+          });
+
+          if (!membership) {
+            ws.close();
+            return;
+          }
+
+          ws.workspaceId = workspaceId;
+
+          if (!workspaceRooms.has(workspaceId)) {
+            workspaceRooms.set(workspaceId, new Set());
+          }
+
+          workspaceRooms.get(workspaceId)!.add(ws);
+        }
+
+        // =========================
         // JOIN DOCUMENT
         // =========================
 
@@ -250,6 +278,7 @@ export async function createWSServer(prisma: PrismaService) {
           broadcastToWorkspace(workspaceId, {
             type: 'title-change',
             data: {
+              workspaceId,
               documentId,
               title,
             },
@@ -279,6 +308,7 @@ export async function createWSServer(prisma: PrismaService) {
           broadcastToWorkspace(workspaceId, {
             type: 'document-deleted',
             data: {
+              workspaceId,
               documentId,
             },
           });

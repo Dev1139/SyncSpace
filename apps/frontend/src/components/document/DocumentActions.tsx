@@ -11,6 +11,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import ConfirmModal from "../ui/ConfirmModal";
 
 import RenameDocumentModal from "./RenameDocumentModal";
+import { useWS } from "../../context/WebContextProvider";
 
 type Props = {
   documentId: string;
@@ -38,6 +39,7 @@ export default function DocumentActions({
   onRefresh,
 }: Props) {
   const navigate = useNavigate();
+  const wsContext = useWS();
 
   const { documentId: activeDocumentId } = useParams();
 
@@ -75,6 +77,14 @@ export default function DocumentActions({
       await deleteDocument(documentId);
 
       toast.success("Document deleted");
+
+      wsContext?.send({
+        type: "document-deleted",
+        data: {
+          workspaceId,
+          documentId,
+        },
+      });
 
       onRefresh?.();
 
@@ -136,7 +146,18 @@ export default function DocumentActions({
         documentId={documentId}
         currentTitle={currentTitle}
         onClose={() => setRenameOpen(false)}
-        onSuccess={onRefresh}
+        onSuccess={(title) => {
+          wsContext?.send({
+            type: "title-change",
+            data: {
+              workspaceId,
+              documentId,
+              title,
+            },
+          });
+
+          onRefresh?.();
+        }}
       />
 
       <ConfirmModal

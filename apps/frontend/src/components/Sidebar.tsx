@@ -33,9 +33,6 @@ export default function Sidebar({
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempTitle, setTempTitle] = useState("");
-
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
   const handleRename = (id: string) => {
     if (!tempTitle.trim()) {
       setEditingId(null);

@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import toast from "react-hot-toast";
 
-import { Lock, LogOut, Save, User } from "lucide-react";
+import { Lock, LogOut, Save } from "lucide-react";
 
 import Modal from "../ui/Modal";
 

@@ -20,7 +20,7 @@ export const WorkspaceProvider = ({ children }: any) => {
 
   useEffect(() => {
     const load = async () => {
-      const res = await getWorkspaces();
+      const res = (await getWorkspaces()) as any;
 
       const items = res?.data?.items || [];
 

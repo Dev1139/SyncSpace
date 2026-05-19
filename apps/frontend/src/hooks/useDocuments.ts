@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkspace } from "../context/WorkspaceContext";
 import {
-  createWorkspaceDocument,
-  deleteDocumentById,
-  fetchWorkspaceDocuments,
-  updateDocumentTitleById,
+  createDocument,
+  deleteDocument,
+  getDocuments,
+  updateDocumentTitle,
 } from "../services/documentApi";
+import { DEFAULT_DOCUMENT_TITLE } from "../constants/appConfig";
 import type { Doc } from "../types/document";
 
 type WSHelpers = {
@@ -97,10 +98,11 @@ export const useDocuments = ({
     async (searchValue = "") => {
       if (!currentWorkspaceId) return;
 
-      const items = await fetchWorkspaceDocuments(
+      const response = (await getDocuments(
         currentWorkspaceId,
         searchValue
-      );
+      )) as any;
+      const items = (response?.data?.items || []) as Doc[];
 
       mergeDocumentCache(items);
 
@@ -160,7 +162,10 @@ export const useDocuments = ({
     console.log(currentWorkspaceId+" this is current workspace id");
     
 
-    const doc = await createWorkspaceDocument(currentWorkspaceId);
+    const response = (await createDocument(currentWorkspaceId, {
+      title: DEFAULT_DOCUMENT_TITLE,
+    })) as any;
+    const doc = response?.data;
     if (!doc) return;
 
     setDocuments((prev) => [doc, ...prev]);
@@ -181,7 +186,7 @@ export const useDocuments = ({
     async (id: string) => {
       if (!currentWorkspaceId) return;
 
-      await deleteDocumentById(id);
+      await deleteDocument(id);
 
       setDocuments((prev) => {
         const updated = prev.filter((doc) => doc.id !== id);
@@ -223,7 +228,7 @@ export const useDocuments = ({
         )
       );
 
-      await updateDocumentTitleById(id, title);
+      await updateDocumentTitle(id, { title });
 
       send?.({
         type: "title-change",
